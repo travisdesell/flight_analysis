@@ -34,7 +34,7 @@ using boost::char_separator;
 /**
  *  For argument parsing and other helpful functions
  */
-#include "undvc_common/arguments.hxx"
+#include "tao/undvc_common/arguments.hxx"
 
 
 /****
@@ -220,6 +220,12 @@ void test_svm() {
 
     long misclassified_positive = 0;
     long total_positive = 0;
+
+    cout << "lagrange multipliers: " << endl;
+    for (uint32_t i = 0; i < training_examples.size(); i++) {
+        cout << "\t" << training_examples[i]->lagrange_multiplier << endl;
+    }
+
 
     for (uint32_t i = 0; i < training_examples.size(); i++) {
         if (training_examples[i]->desired_output < 0) total_negative++;
@@ -483,13 +489,13 @@ void train() {
 //                cout << "changed > 0:" << endl;
             }
 
-//            cout << "\t";
+            cout << "changed:\t";
             for (uint32_t i = 0; i < training_examples.size(); i++) {
                 int changed = examine_example(training_examples[i]);
-//                if (changed > 0) cout << setw(8) << training_examples[i]->id;
+                if (changed > 0) cout << setw(8) << training_examples[i]->id;
                 number_changed += changed;
             }
-//            cout << endl;
+            cout << endl;
 
         } else {
             if (verbose) {
@@ -548,7 +554,7 @@ int main(int argc, char** argv) {
     string testing_file = "";
 
     get_argument(arguments, "--training_file", true, training_file);
-    get_argument(arguments, "--training_file", false, testing_file);
+    get_argument(arguments, "--testing_file", false, testing_file);
 
     string kernel_type;
     get_argument(arguments, "--kernel_type", true, kernel_type);

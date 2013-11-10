@@ -201,6 +201,13 @@ void test_svm() {
     long misclassified_positive = 0;
     long total_positive = 0;
 
+
+    cout << "lagrange multipliers: " << endl;
+    for (uint32_t i = 0; i < training_examples.size(); i++) {
+        cout << "\t" << training_examples[i]->lagrange_multiplier << endl;
+    }
+
+
     for (uint32_t i = 0; i < training_examples.size(); i++) {
         if (training_examples[i]->desired_output < 0) total_negative++;
         if (training_examples[i]->desired_output > 0) total_positive++;
