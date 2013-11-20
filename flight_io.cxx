@@ -58,7 +58,7 @@ void read_flight_file(string input_filename, unsigned int &rows, unsigned int &c
         tokenizer<char_separator<char> > tok(s, sep);
 
         for (tokenizer< char_separator<char> >::iterator i = tok.begin(); i != tok.end(); ++i) {
-            if (position >= 3) continue;
+            if (position >= cols) continue;
 
             flight_row[position] = atof( (*i).c_str() );
 //            cout << "pushed back '" << *i << "'" << endl;
