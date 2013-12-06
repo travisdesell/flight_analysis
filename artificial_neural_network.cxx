@@ -33,6 +33,9 @@ using std::setw;
 
 class ArtificialNeuralNetwork {
     public:
+        virtual PRECISION get_output_layer(int i) = 0;
+
+        virtual void evaluate_at(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) = 0;
         virtual PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) = 0;
 };
 
@@ -48,6 +51,10 @@ class RecurrentANN : public ArtificialNeuralNetwork {
         PRECISION *recurrent_layer;
 
     public:
+        PRECISION get_output_layer(int i) {
+            return output_layer[i];
+        }
+
         RecurrentANN(unsigned int ils, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layer_size(hls), output_layer_size(ols), recurrent_layer_size(ols) {
             hidden_layer = new PRECISION[hidden_layer_size];
             output_layer = new PRECISION[output_layer_size];
@@ -56,7 +63,7 @@ class RecurrentANN : public ArtificialNeuralNetwork {
             for (unsigned int i = 0; i < recurrent_layer_size; i++) recurrent_layer[i] = 0;
         }
 
-        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
+        void evaluate_at(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
             unsigned int current_weight = 0;
             for (unsigned int i = 0; i < hidden_layer_size; i++) {
                 hidden_layer[i] = 0;
@@ -82,6 +89,10 @@ class RecurrentANN : public ArtificialNeuralNetwork {
                     current_weight++;
                 }
             }
+        }
+
+        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
+            evaluate_at(weights, input_layer, expected_output);
 
             PRECISION error = 0.0;
             PRECISION temp;
@@ -107,12 +118,16 @@ class FeedForwardANN : public ArtificialNeuralNetwork{
         PRECISION *output_layer;
 
     public:
+        PRECISION get_output_layer(int i) {
+            return output_layer[i];
+        }
+
         FeedForwardANN(unsigned int ils, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layer_size(hls), output_layer_size(ols) {
             hidden_layer = new PRECISION[hidden_layer_size];
             output_layer = new PRECISION[output_layer_size];
         }
 
-        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
+        void evaluate_at(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
             unsigned int current_weight = 0;
             for (unsigned int i = 0; i < hidden_layer_size; i++) {
                 hidden_layer[i] = 0;
@@ -131,6 +146,10 @@ class FeedForwardANN : public ArtificialNeuralNetwork{
                     current_weight++;
                 }
             }
+        }
+
+        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
+            evaluate_at(weights, input_layer, expected_output);
 
             PRECISION error = 0.0;
             PRECISION temp;
@@ -145,6 +164,7 @@ class FeedForwardANN : public ArtificialNeuralNetwork{
 //    friend double objective_function(const vector<double> &);
 };
 
+int seconds_into_future = 4;
 double* flight_data = NULL;
 unsigned int flight_rows;
 unsigned int flight_columns;
@@ -157,8 +177,8 @@ double objective_function(const vector<double> &parameters) {
 //    double max_error = 0;
     double total_error = 0;
     double current_error;
-    for (int i = 0; i < flight_rows - (input_timesteps + output_timesteps); i++) {
-        current_error = ann->evaluate( parameters, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps) * flight_columns]) );
+    for (int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
+        current_error = ann->evaluate( parameters, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
 //        if (current_error > max_error) max_error = current_error;
 
         total_error += current_error;
@@ -219,57 +239,85 @@ int main(int argc, char** argv) {
         ann = new FeedForwardANN(input_layer_size, hidden_layer_size, output_layer_size);
     }
 
-    vector<double> min_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), -20.0);
-    vector<double> max_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), 20.0);
+    string ann_parameters;
+    if (get_argument(arguments, "--test_ann", false, ann_parameters)) {
+        cout << "testing ann: '" << ann_parameters << "'" << endl;
+        vector<double> ann_parameters_v;
+        string_to_vector(ann_parameters, ann_parameters_v);
 
-    cout << "number of parameters: " << min_bound.size() << endl;
-
-    string search_type;
-    get_argument(arguments, "--search_type", true, search_type);
-
-    if (search_type.compare("ps") == 0) {
-        ParticleSwarm ps(min_bound, max_bound, arguments);
-        ps.iterate(objective_function);
-
-    } else if (search_type.compare("de") == 0) {
-        DifferentialEvolution de(min_bound, max_bound, arguments);
-        de.iterate(objective_function);
-
-    } else if (search_type.compare("ps_mpi") == 0) {
-        ParticleSwarmMPI ps(min_bound, max_bound, arguments);
-
-#ifdef CUDA
-        int max_rank;
-        MPI_Comm_size(MPI_COMM_WORLD, &max_rank);
-
-        if (max_rank == 33) {
-            int device_assignments[] = {-1, 0, 1, -1, -1, -1, -1, -1, -1,
-                0, 1, -1, -1, -1, -1, -1, -1,
-                0, 1, -1, -1, -1, -1, -1, -1,
-                0, 1, -1, -1, -1, -1, -1, -1};
-
-            ps.go(objective_function, objective_function_gpu, device_assignments);
-        } else if (max_rank == 9) {
-            int device_assignments[] = {-1, 0, 1, 0, 1, 0, 1, 0, 1};
-
-            ps.go(objective_function, objective_funciton_gpu, device_assignments);
-        } else if (max_rank == 2) {
-            ps.go(objective_function_gpu);
+        for (unsigned int i = 0; i < ann_parameters_v.size(); i++) {
+            cout << "ann_parameters_v[" << i << "]: " << ann_parameters_v[i] << endl;
         }
-#else
-        ps.go(objective_function);
-#endif
 
-    } else if (search_type.compare("de_mpi") == 0) {
-        DifferentialEvolutionMPI de(min_bound, max_bound, arguments);
-        de.go(objective_function);
+        double total_error = 0;
+        double current_error;
+        for (int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
+            current_error = ann->evaluate( ann_parameters_v, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
+            //ann->evaluate_at( ann_parameters_v, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
+
+            cout << setw(5) << i;
+            for (int j = 0; j < flight_columns; j++) {
+                cout << setw(10) << ann->get_output_layer(j) << setw(10) << flight_data[((i + input_timesteps + seconds_into_future) * flight_columns) + j];
+            }
+            cout << endl;
+
+            total_error += current_error;
+        }
+        cerr << "total error: " << (total_error / flight_rows) << endl;
 
     } else {
-        fprintf(stderr, "Improperly specified search type: '%s'\n", search_type.c_str());
-        fprintf(stderr, "Possibilities are:\n");
-        fprintf(stderr, "    de     -       differential evolution\n");
-        fprintf(stderr, "    ps     -       particle swarm optimization\n");
-        exit(0);
-    }
 
+        vector<double> min_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), -20.0);
+        vector<double> max_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), 20.0);
+
+        cout << "number of parameters: " << min_bound.size() << endl;
+
+        string search_type;
+        get_argument(arguments, "--search_type", true, search_type);
+
+        if (search_type.compare("ps") == 0) {
+            ParticleSwarm ps(min_bound, max_bound, arguments);
+            ps.iterate(objective_function);
+
+        } else if (search_type.compare("de") == 0) {
+            DifferentialEvolution de(min_bound, max_bound, arguments);
+            de.iterate(objective_function);
+
+        } else if (search_type.compare("ps_mpi") == 0) {
+            ParticleSwarmMPI ps(min_bound, max_bound, arguments);
+
+#ifdef CUDA
+            int max_rank;
+            MPI_Comm_size(MPI_COMM_WORLD, &max_rank);
+
+            if (max_rank == 33) {
+                int device_assignments[] = {-1, 0, 1, -1, -1, -1, -1, -1, -1,
+                    0, 1, -1, -1, -1, -1, -1, -1,
+                    0, 1, -1, -1, -1, -1, -1, -1,
+                    0, 1, -1, -1, -1, -1, -1, -1};
+
+                ps.go(objective_function, objective_function_gpu, device_assignments);
+            } else if (max_rank == 9) {
+                int device_assignments[] = {-1, 0, 1, 0, 1, 0, 1, 0, 1};
+
+                ps.go(objective_function, objective_funciton_gpu, device_assignments);
+            } else if (max_rank == 2) {
+                ps.go(objective_function_gpu);
+            }
+#else
+            ps.go(objective_function);
+#endif
+
+        } else if (search_type.compare("de_mpi") == 0) {
+            DifferentialEvolutionMPI de(min_bound, max_bound, arguments);
+            de.go(objective_function);
+
+        } else {
+            fprintf(stderr, "Improperly specified search type: '%s'\n", search_type.c_str());
+            fprintf(stderr, "Possibilities are:\n");
+            fprintf(stderr, "    de     -       differential evolution\n");
+            fprintf(stderr, "    ps     -       particle swarm optimization\n");
+            exit(0);
+        }
+    }
 }

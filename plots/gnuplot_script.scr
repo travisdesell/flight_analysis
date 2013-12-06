@@ -1,0 +1,44 @@
+#! /usr/bin/gnuplot
+
+reset
+set terminal png size 4000, 1500 crop
+set title "Flight MSL Altitude Estimation"
+set datafile missing "-"
+
+set style data lines
+set key right box
+set ylabel "value"
+set xlabel "timestep"
+set output altitude_output_file
+
+plot input_file every 1 u 6 ti 'Expected MSL Altitude', \
+     input_file every 1 u 7 ti 'Actual MSL Altitude'
+
+reset
+set terminal png size 4000, 1500 crop
+set title "Flight Roll Estimation"
+set datafile missing "-"
+
+set style data lines
+set key right box
+set ylabel "value"
+set xlabel "timestep"
+set output roll_output_file
+
+plot input_file every 1 u 2 ti 'Expected Roll Attitude', \
+     input_file every 1 u 3 ti 'Actual Roll Attitude'
+
+reset
+set terminal png size 4000, 1500 crop
+set title "Flight Estimation"
+set datafile missing "-"
+
+set style data lines
+set key right box
+set ylabel "value"
+set xlabel "timestep"
+set output pitch_output_file
+
+plot input_file every 1 u 4 ti 'Expected Pitch Attitude', \
+     input_file every 1 u 5 ti 'Actual Pitch Altitude'
+
