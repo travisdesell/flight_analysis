@@ -1,0 +1,14 @@
+#PBS -S /bin/bash
+#PBS -N flight_prediction
+#PBS -l nodes=8:ppn=8,walltime=3:00:00,naccesspolicy=singlejob
+#PBS -o /home/travis.desell/flight_data/output/$PBS_JOBID_ann.txt
+#PBS -e /home/travis.desell/flight_data/output/$PBS_JOBID_ann.txt
+###PBS -m abe
+#PBS -M tdesell@cs.und.edu
+###PBS -q priority
+###PBS -l qos=priority
+
+env | grep PBS
+echo $PBS_NP
+cd ~/flight_analysis/build
+/opt/mvapich2-x/gnu/bin/mpiexec -machinefile $PBS_NODEFILE -np 64 ./artificial_neural_network --input_filename /home/travis.desell/flight_data/no_excedence/14799 --input_timesteps 3 --output_timesteps 1 --recurrent --hidden_nodes 3 --search_type de --population_size 2000 --parent_type best --number_pairs 2 --seconds_into_future 4
