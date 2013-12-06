@@ -20,6 +20,8 @@ using std::string;
 #include <vector>
 using std::vector;
 
+#include <stdint.h>
+
 /**
  *  For MYSQL
  */

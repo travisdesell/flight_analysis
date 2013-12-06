@@ -27,7 +27,7 @@ using boost::char_separator;
 
 
 void read_flight_file(string input_filename, unsigned int &rows, unsigned int &cols, double* &final_flight_data, vector<string> &column_headers) {
-    ifstream input_file( input_filename );
+    ifstream input_file( input_filename.c_str() );
     if (!input_file.is_open()) {
         cerr << "Error, could not open file: '" << input_filename << "' for reading." << endl;
         exit(1);

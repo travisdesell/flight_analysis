@@ -164,7 +164,7 @@ class FeedForwardANN : public ArtificialNeuralNetwork{
 //    friend double objective_function(const vector<double> &);
 };
 
-int seconds_into_future = 4;
+int seconds_into_future = 0;
 double* flight_data = NULL;
 unsigned int flight_rows;
 unsigned int flight_columns;
@@ -222,6 +222,10 @@ int main(int argc, char** argv) {
     if (argument_exists(arguments, "--recurrent")) {
         recurrent_layer_size = output_layer_size;
     }
+
+    get_argument(arguments, "--seconds_into_future", false, seconds_into_future);
+    cout << "seconds into future: " << seconds_into_future << endl;
+
 
     cout << "input  timesteps: " << input_timesteps << endl;
     cout << "output timesteps: " << output_timesteps << endl;
