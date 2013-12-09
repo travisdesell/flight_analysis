@@ -20,9 +20,18 @@ set(BOOST_COMPILER "-vc100")
 set(Boost_COMPILER "-vc100")
 set(Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0")
 
+set(USING_HODOR "OFF")
+option(USING_HODOR "USING_HODOR")
+
+message(STATUS "USING HODOR: ${USING_HODOR}")
+
+if (USING_HODOR MATCHES "ON")
 #need these for hodor
-set (MPI_COMPILER "/opt/mvapich2-x/gnu/bin/mpic++")
-set (MPI_INCLUDE_PATH "/opt/mvapich2-x/gnu/include")
+    message(STATUS "USING HODOR! : ${USING_HODOR}")
+    set (MPI_COMPILER "/opt/mvapich2-x/gnu/bin/mpic++")
+    set (MPI_INCLUDE_PATH "/opt/mvapich2-x/gnu/include")
+endif ()
+
 
 find_package(Boost REQUIRED system filesystem)
 find_package(MySQL)

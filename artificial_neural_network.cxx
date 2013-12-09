@@ -35,13 +35,13 @@ class ArtificialNeuralNetwork {
     public:
         virtual PRECISION get_output_layer(int i) = 0;
 
-        virtual void evaluate_at(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) = 0;
         virtual PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) = 0;
 };
 
 class RecurrentANN : public ArtificialNeuralNetwork {
     private:
         const unsigned int input_layer_size;
+        const unsigned int hidden_layers;
         const unsigned int hidden_layer_size;
         const unsigned int output_layer_size;
         const unsigned int recurrent_layer_size;
@@ -55,15 +55,19 @@ class RecurrentANN : public ArtificialNeuralNetwork {
             return output_layer[i];
         }
 
-        RecurrentANN(unsigned int ils, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layer_size(hls), output_layer_size(ols), recurrent_layer_size(ols) {
-            hidden_layer = new PRECISION[hidden_layer_size];
+        RecurrentANN(unsigned int ils, unsigned int hl, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layers(hl), hidden_layer_size(hls), output_layer_size(ols), recurrent_layer_size(ols) {
+            hidden_layer = new PRECISION[hidden_layer_size * hidden_layers];
             output_layer = new PRECISION[output_layer_size];
 
             recurrent_layer = new PRECISION[recurrent_layer_size];
             for (unsigned int i = 0; i < recurrent_layer_size; i++) recurrent_layer[i] = 0;
         }
 
-        void evaluate_at(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
+        void reset_recurrent_layer() {
+            for (unsigned int i = 0; i < recurrent_layer_size; i++) recurrent_layer[i] = 0;
+        }
+
+        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
             unsigned int current_weight = 0;
             for (unsigned int i = 0; i < hidden_layer_size; i++) {
                 hidden_layer[i] = 0;
@@ -89,10 +93,6 @@ class RecurrentANN : public ArtificialNeuralNetwork {
                     current_weight++;
                 }
             }
-        }
-
-        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
-            evaluate_at(weights, input_layer, expected_output);
 
             PRECISION error = 0.0;
             PRECISION temp;
@@ -111,6 +111,7 @@ class RecurrentANN : public ArtificialNeuralNetwork {
 class FeedForwardANN : public ArtificialNeuralNetwork{
     private:
         const unsigned int input_layer_size;
+        const unsigned int hidden_layers;
         const unsigned int hidden_layer_size;
         const unsigned int output_layer_size;
 
@@ -122,12 +123,12 @@ class FeedForwardANN : public ArtificialNeuralNetwork{
             return output_layer[i];
         }
 
-        FeedForwardANN(unsigned int ils, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layer_size(hls), output_layer_size(ols) {
-            hidden_layer = new PRECISION[hidden_layer_size];
+        FeedForwardANN(unsigned int ils, unsigned int hl, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layers(hl), hidden_layer_size(hls), output_layer_size(ols) {
+            hidden_layer = new PRECISION[hidden_layer_size * hidden_layers];
             output_layer = new PRECISION[output_layer_size];
         }
 
-        void evaluate_at(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
+        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
             unsigned int current_weight = 0;
             for (unsigned int i = 0; i < hidden_layer_size; i++) {
                 hidden_layer[i] = 0;
@@ -146,10 +147,6 @@ class FeedForwardANN : public ArtificialNeuralNetwork{
                     current_weight++;
                 }
             }
-        }
-
-        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
-            evaluate_at(weights, input_layer, expected_output);
 
             PRECISION error = 0.0;
             PRECISION temp;
@@ -177,7 +174,13 @@ double objective_function(const vector<double> &parameters) {
 //    double max_error = 0;
     double total_error = 0;
     double current_error;
-    for (int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
+    
+    RecurrentANN *rnn = dynamic_cast<RecurrentANN*>(ann);
+    if (rnn != NULL) {
+        rnn->reset_recurrent_layer();
+    }
+
+    for (unsigned int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
         current_error = ann->evaluate( parameters, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
 //        if (current_error > max_error) max_error = current_error;
 
@@ -189,6 +192,13 @@ double objective_function(const vector<double> &parameters) {
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
+
+    int rank, max_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &max_rank);
+
+    cout << "process: " << rank<< " of " << max_rank << endl;
+
 
     vector<string> arguments(argv, argv + argc);
     
@@ -215,8 +225,9 @@ int main(int argc, char** argv) {
     unsigned int output_layer_size = output_timesteps * flight_columns;
 
 //    int hidden_layer_size  = (input_layer_size + output_layer_size) * 0.2;
-    unsigned int hidden_layer_size;
+    unsigned int hidden_layer_size, hidden_layers;
     get_argument(arguments, "--hidden_nodes", true, hidden_layer_size);
+    get_argument(arguments, "--hidden_layers", true, hidden_layers);
 
     unsigned int recurrent_layer_size = 0;
     if (argument_exists(arguments, "--recurrent")) {
@@ -238,9 +249,9 @@ int main(int argc, char** argv) {
     srand48(time(NULL));
 
     if (recurrent_layer_size > 0) {
-        ann = new RecurrentANN(input_layer_size, hidden_layer_size, output_layer_size);
+        ann = new RecurrentANN(input_layer_size, hidden_layers, hidden_layer_size, output_layer_size);
     } else {
-        ann = new FeedForwardANN(input_layer_size, hidden_layer_size, output_layer_size);
+        ann = new FeedForwardANN(input_layer_size, hidden_layers, hidden_layer_size, output_layer_size);
     }
 
     string ann_parameters;
