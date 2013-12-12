@@ -34,13 +34,6 @@ using std::setw;
 #define PRECISION double
 
 class ArtificialNeuralNetwork {
-    public:
-        virtual PRECISION get_output_layer(int i) = 0;
-
-        virtual PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) = 0;
-};
-
-class RecurrentANN : public ArtificialNeuralNetwork {
     private:
         const unsigned int input_layer_size;
         const unsigned int hidden_layers;
@@ -48,25 +41,35 @@ class RecurrentANN : public ArtificialNeuralNetwork {
         const unsigned int output_layer_size;
         const unsigned int recurrent_layer_size;
 
+        const unsigned int type;
+
         PRECISION *hidden_layer;
         PRECISION *output_layer;
         PRECISION *recurrent_layer;
 
     public:
+        const static unsigned int FEED_FORWARD_NETWORK = 0;
+        const static unsigned int ELMAN_NETWORK = 1;
+        const static unsigned int JORDAN_NETWORK = 2;
+
         PRECISION get_output_layer(int i) {
             return output_layer[i];
         }
 
-        RecurrentANN(unsigned int ils, unsigned int hl, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layers(hl), hidden_layer_size(hls), output_layer_size(ols), recurrent_layer_size(ols) {
+        ArtificialNeuralNetwork(unsigned int ils, unsigned int hl, unsigned int hls, unsigned int ols, unsigned int rls, unsigned int t) : input_layer_size(ils), hidden_layers(hl), hidden_layer_size(hls), output_layer_size(ols), recurrent_layer_size(rls), type(t) {
             hidden_layer = new PRECISION[hidden_layer_size * hidden_layers];
             output_layer = new PRECISION[output_layer_size];
 
-            recurrent_layer = new PRECISION[recurrent_layer_size];
-            for (unsigned int i = 0; i < recurrent_layer_size; i++) recurrent_layer[i] = 0;
+            if (type != FEED_FORWARD_NETWORK) { //feed forward NNs do not have a recurrent layer
+                recurrent_layer = new PRECISION[recurrent_layer_size];
+                for (unsigned int i = 0; i < recurrent_layer_size * hidden_layers; i++) recurrent_layer[i] = 0;
+            }
         }
 
-        void reset_recurrent_layer() {
-            for (unsigned int i = 0; i < recurrent_layer_size; i++) recurrent_layer[i] = 0;
+        void reset() {
+            if (type != FEED_FORWARD_NETWORK) { //feed forward NNs do not have a recurrent layer
+                for (unsigned int i = 0; i < recurrent_layer_size; i++) recurrent_layer[i] = 0;
+            }
         }
 
         PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
@@ -80,10 +83,12 @@ class RecurrentANN : public ArtificialNeuralNetwork {
                 }
             }
 
-            for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                for (unsigned int j = 0; j < recurrent_layer_size; j++) {
-                    hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
-                    current_weight++;
+            if (type != FEED_FORWARD_NETWORK) {
+                for (unsigned int i = 0; i < hidden_layer_size; i++) {
+                    for (unsigned int j = 0; j < recurrent_layer_size; j++) {
+                        hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
+                        current_weight++;
+                    }
                 }
             }
 
@@ -94,59 +99,18 @@ class RecurrentANN : public ArtificialNeuralNetwork {
                     output_layer[i] += weights[current_weight] * hidden_layer[j];
                     current_weight++;
                 }
+
             }
 
-            PRECISION error = 0.0;
-            PRECISION temp;
-            for (unsigned int i = 0; i < output_layer_size; i++) {
-                temp = output_layer[i] - expected_output[i];
-                error += temp * temp;
-            }
-
-            return sqrt(error);
-        }
-
-//    friend double objective_function(const vector<double> &);
-};
-
-
-class FeedForwardANN : public ArtificialNeuralNetwork{
-    private:
-        const unsigned int input_layer_size;
-        const unsigned int hidden_layers;
-        const unsigned int hidden_layer_size;
-        const unsigned int output_layer_size;
-
-        PRECISION *hidden_layer;
-        PRECISION *output_layer;
-
-    public:
-        PRECISION get_output_layer(int i) {
-            return output_layer[i];
-        }
-
-        FeedForwardANN(unsigned int ils, unsigned int hl, unsigned int hls, unsigned int ols) : input_layer_size(ils), hidden_layers(hl), hidden_layer_size(hls), output_layer_size(ols) {
-            hidden_layer = new PRECISION[hidden_layer_size * hidden_layers];
-            output_layer = new PRECISION[output_layer_size];
-        }
-
-        PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
-            unsigned int current_weight = 0;
-            for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                hidden_layer[i] = 0;
-
-                for (unsigned int j = 0; j < input_layer_size; j++) {
-                    hidden_layer[i] += weights[current_weight] * input_layer[j];
-                    current_weight++;
+            //Update the recurrent layer.
+            //Need to update for mutliple hidden layers
+            if (type == ELMAN_NETWORK) {
+                for (unsigned int i = 0; i < hidden_layer_size; i++) {
+                    recurrent_layer[i] = hidden_layer[i];
                 }
-            }
-
-            for (unsigned int i = 0; i < output_layer_size; i++) {
-                output_layer[i] = 0;
-
-                for (unsigned int j = 0; j < hidden_layer_size; j++) {
-                    output_layer[i] += weights[current_weight] * hidden_layer[j];
-                    current_weight++;
+            } else if (type == JORDAN_NETWORK) {
+                for (unsigned int i = 0; i < output_layer_size; i++) {
+                    recurrent_layer[i] = output_layer[i];
                 }
             }
 
@@ -173,23 +137,23 @@ ArtificialNeuralNetwork *ann;
 
 double objective_function(const vector<double> &parameters) {
 
-//    double max_error = 0;
+    double max_error = 0;
     double total_error = 0;
     double current_error;
     
-    RecurrentANN *rnn = dynamic_cast<RecurrentANN*>(ann);
-    if (rnn != NULL) {
-        rnn->reset_recurrent_layer();
-    }
+    ann->reset();
 
     for (unsigned int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
         current_error = ann->evaluate( parameters, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
-//        if (current_error > max_error) max_error = current_error;
+        if (current_error > max_error) max_error = current_error;
 
-        total_error += current_error;
 //        cout << setw(15) << total_error << " - " << setw(10) << current_error << " - " << max_error << endl;
+        total_error += current_error;
     }
+//    cout << "total_error: " << total_error << endl;
     return -(total_error / flight_rows);
+//    cout << "max_error: " << max_error << endl;
+//    return -max_error;
 }
 
 int main(int argc, char** argv) {
@@ -199,7 +163,7 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &max_rank);
 
-    cout << "process: " << rank<< " of " << max_rank << endl;
+    //cout << "process: " << rank << " of " << max_rank << endl;
 
 
     vector<string> arguments(argv, argv + argc);
@@ -231,9 +195,25 @@ int main(int argc, char** argv) {
     get_argument(arguments, "--hidden_nodes", true, hidden_layer_size);
     get_argument(arguments, "--hidden_layers", true, hidden_layers);
 
-    unsigned int recurrent_layer_size = 0;
-    if (argument_exists(arguments, "--recurrent")) {
+    string network_type_s;
+    unsigned int network_type;
+    get_argument(arguments, "--network_type", true, network_type_s);
+
+    int recurrent_layer_size = 0;
+    if (0 == network_type_s.compare("feed_forward")) {
+        network_type = ArtificialNeuralNetwork::FEED_FORWARD_NETWORK;
+    } else if (0 == network_type_s.compare("elman")) {
+        network_type = ArtificialNeuralNetwork::ELMAN_NETWORK;
+        recurrent_layer_size = hidden_layer_size;
+    } else if (0 == network_type_s.compare("jordan")) {
+        network_type = ArtificialNeuralNetwork::JORDAN_NETWORK;
         recurrent_layer_size = output_layer_size;
+    } else {
+        cerr << "Unknown 'network_type' argument, possibilities:" << endl;
+        cerr << "    feed_forward" << endl;
+        cerr << "    elman" << endl;
+        cerr << "    jordan" << endl;
+        exit(0);
     }
 
     get_argument(arguments, "--seconds_into_future", false, seconds_into_future);
@@ -246,15 +226,12 @@ int main(int argc, char** argv) {
     cout << "input     layer size: " << input_layer_size << endl;
     cout << "hidden    layer size: " << hidden_layer_size << endl;
     cout << "output    layer size: " << output_layer_size << endl;
-    cout << "recurrent layer size: " << recurrent_layer_size << endl;
+
+    cout << "network type: " << network_type << endl;
 
     srand48(time(NULL));
 
-    if (recurrent_layer_size > 0) {
-        ann = new RecurrentANN(input_layer_size, hidden_layers, hidden_layer_size, output_layer_size);
-    } else {
-        ann = new FeedForwardANN(input_layer_size, hidden_layers, hidden_layer_size, output_layer_size);
-    }
+    ann = new ArtificialNeuralNetwork(input_layer_size, hidden_layers, hidden_layer_size, output_layer_size, recurrent_layer_size, network_type);
 
     string ann_parameters;
     if (get_argument(arguments, "--test_ann", false, ann_parameters)) {
@@ -262,19 +239,21 @@ int main(int argc, char** argv) {
         vector<double> ann_parameters_v;
         string_to_vector(ann_parameters, ann_parameters_v);
 
+        /*
         for (unsigned int i = 0; i < ann_parameters_v.size(); i++) {
             cout << "ann_parameters_v[" << i << "]: " << ann_parameters_v[i] << endl;
         }
+        */
 
         double total_error = 0;
         double current_error;
-        for (int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
+        for (unsigned int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
             current_error = ann->evaluate( ann_parameters_v, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
             //ann->evaluate_at( ann_parameters_v, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
 
             cout << setw(5) << i;
-            for (int j = 0; j < flight_columns; j++) {
-                cout << setw(10) << ann->get_output_layer(j) << setw(10) << flight_data[((i + input_timesteps + seconds_into_future) * flight_columns) + j];
+            for (unsigned int j = 0; j < flight_columns; j++) {
+                cout << setw(20) << ann->get_output_layer(j) << setw(20) << flight_data[((i + input_timesteps + seconds_into_future) * flight_columns) + j];
             }
             cout << endl;
 
@@ -284,8 +263,8 @@ int main(int argc, char** argv) {
 
     } else {
 
-        vector<double> min_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), -20.0);
-        vector<double> max_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), 20.0);
+        vector<double> min_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), -2.0);
+        vector<double> max_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), 2.0);
 
         cout << "number of parameters: " << min_bound.size() << endl;
 
@@ -333,7 +312,7 @@ int main(int argc, char** argv) {
             srand48(time(NULL));
 
             vector<double> starting_point(min_bound.size(), 0);
-            for (int i = 0; i < min_bound.size(); i++) {
+            for (unsigned int i = 0; i < min_bound.size(); i++) {
                 starting_point[i] = min_bound[i] + ((max_bound[i] - min_bound[i]) * drand48());
             }
 
