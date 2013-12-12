@@ -24,7 +24,9 @@ using std::setw;
 #include "asynchronous_algorithms/particle_swarm.hxx"
 #include "asynchronous_algorithms/differential_evolution.hxx"
 
-#include "synchronous_algorithms/parameter_sweep.hxx"
+#include "tao/synchronous_algorithms/synchronous_newton_method.hxx"
+#include "tao/synchronous_algorithms/synchronous_gradient_descent.hxx"
+
 
 //from undvc_common
 #include "undvc_common/arguments.hxx"
@@ -327,11 +329,35 @@ int main(int argc, char** argv) {
             DifferentialEvolutionMPI de(min_bound, max_bound, arguments);
             de.go(objective_function);
 
+        } else if (search_type.compare("snm") == 0 || search_type.compare("gd") == 0 || search_type.compare("cgd") == 0) {
+            srand48(time(NULL));
+
+            vector<double> starting_point(min_bound.size(), 0);
+            for (int i = 0; i < min_bound.size(); i++) {
+                starting_point[i] = min_bound[i] + ((max_bound[i] - min_bound[i]) * drand48());
+            }
+
+            vector<double> step_size(min_bound.size(), 0.001);
+
+            if (search_type.compare("snm") == 0) {
+                synchronous_newton_method(arguments, objective_function, starting_point, step_size);
+            } else if (search_type.compare("gd") == 0) {
+                synchronous_gradient_descent(arguments, objective_function, starting_point, step_size);
+            } else if (search_type.compare("cgd") == 0) {
+                synchronous_conjugate_gradient_descent(arguments, objective_function, starting_point, step_size);
+            }
+
         } else {
             fprintf(stderr, "Improperly specified search type: '%s'\n", search_type.c_str());
             fprintf(stderr, "Possibilities are:\n");
             fprintf(stderr, "    de     -       differential evolution\n");
             fprintf(stderr, "    ps     -       particle swarm optimization\n");
+            fprintf(stderr, "    de_mpi -       asynchronous differential evolution over MPI\n");
+            fprintf(stderr, "    ps_mpi -       asynchronous particle swarm optimization over MPI\n");
+            fprintf(stderr, "    snm    -       synchronous newton method\n");
+            fprintf(stderr, "    gd     -       gradient descent\n");
+            fprintf(stderr, "    cgd    -       conjugate gradient descent\n");
+
             exit(0);
         }
     }

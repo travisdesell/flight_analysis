@@ -42,15 +42,19 @@ void read_flight_file(string input_filename, unsigned int &rows, unsigned int &c
         column_headers.push_back( *i );
 //        cout << "pushed back '" << *i << "'" << endl;
     }
-    cols = column_headers.size();
-    cols = 3;
+    cols = column_headers.size() - 2;
+    cout << "cols: " << cols << endl;
 
     vector< vector<double> > flight_data;
     getline( input_file, s );
     while (input_file.good()) {
+        if (s.length() > 0 && s[0] == '#') {
+            getline( input_file, s);
+            continue;
+        }
 //        std::cout << s << "\n";
 
-        vector<double> flight_row( column_headers.size() );
+        vector<double> flight_row( cols );
 
         int position = 0;
 
@@ -58,15 +62,28 @@ void read_flight_file(string input_filename, unsigned int &rows, unsigned int &c
         tokenizer<char_separator<char> > tok(s, sep);
 
         for (tokenizer< char_separator<char> >::iterator i = tok.begin(); i != tok.end(); ++i) {
-            if (position >= cols) continue;
+            if (position == 0) {
+                position++;
+                continue;
+            }
+//            cout << "token is: '" << *i << "', assigning to position: " << (position - 1) << endl;
 
-            flight_row[position] = atof( (*i).c_str() );
-//            cout << "pushed back '" << *i << "'" << endl;
+            flight_row.at(position - 1) = atof( (*i).c_str() );
             position++;
         }
 
+        /*
+        cout << "pushing back" << endl;
+        cout << "flight row:" << endl;
+        for (int i = 0; i < flight_row.size(); i++) {
+            cout << " " << flight_row[i];
+        }
+        cout << endl;
+        cout << "flight_data.size(): " << flight_data.size() << ", capacity: " << flight_data.capacity() << endl;
+        */
         flight_data.push_back(flight_row);
 
+//        cout << "getting next line" << endl;
         getline( input_file, s);
     }
     rows = flight_data.size();

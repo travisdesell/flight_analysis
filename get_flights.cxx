@@ -45,7 +45,7 @@ void __mysql_check(MYSQL *conn, string query, const char *file, const int line) 
     }
 }
 
-void write_flight_data(string filename, const vector< vector<string>* > &flight_data) {
+void write_flight_data(string filename, const vector< vector<string>* > &flight_data, const vector<string> &column_names) {
     if (flight_data.size() == 0) {
         cerr << "Did not write flight, flight_data.size() == 0" << endl;
         return;
@@ -58,8 +58,111 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
         exit(1);
     }
 
+    (*file) << "#";
+    for (uint32_t i = 0; i < column_names.size(); i++) {
+        (*file) << " " << column_names[i];
+    }
+    (*file) << endl;
+
+    vector<double> min(column_names.size(), std::numeric_limits<double>::max());
+    vector<double> max(column_names.size(), std::numeric_limits<double>::min());
+    vector<double> avg(column_names.size(), 0);
+    vector<double> dev(column_names.size(), 0);
+    vector<double> min_delta(column_names.size(), std::numeric_limits<double>::max());
+    vector<double> max_delta(column_names.size(), std::numeric_limits<double>::min());
+    vector<double> avg_delta(column_names.size(), 0);
+    vector<double> dev_delta(column_names.size(), 0);
+
+    //get the mins, maxes and sums
+    int count = 0;
+    for (uint32_t i = 0; i < (flight_data.size() - 1); i++) {
+       vector<string> *flight_row = flight_data.at(i);
+
+        //Skip weird times
+//       if (atoi(flight_row->at(0).c_str()) % 1000 != 0) continue;
+
+        for (uint32_t j = 0; j < flight_row->size(); j++) {
+            double value = atof(flight_row->at(j).c_str());
+            if (value < min[j]) min[j] = value;
+            if (value > max[j]) max[j] = value;
+            avg[j] += value;
+
+            double delta = atof( flight_data.at(i+1)->at(j).c_str() ) - value;
+            if (delta < min_delta[j]) min_delta[j] = delta;
+            if (delta > max_delta[j]) max_delta[j] = delta;
+            avg_delta[j] += delta;
+        }
+
+        count++;
+    }
+
+    //calculate the averages
+    for (uint32_t j = 0; j < column_names.size(); j++) {
+        avg[j] /= count;
+        avg_delta[j] /= count;
+    }
+
+    //sum the devations
+    for (uint32_t i = 0; i < (flight_data.size() - 1); i++) {
+       vector<string> *flight_row = flight_data.at(i);
+
+        //Skip weird times
+//       if (atoi(flight_row->at(0).c_str()) % 1000 != 0) continue;
+
+        for (uint32_t j = 0; j < flight_row->size(); j++) {
+            double value = atof(flight_row->at(j).c_str());
+            dev[j] += sqrt((avg[j] - value) * (avg[j] - value));
+
+            double delta = value - atof( flight_data.at(i+1)->at(j).c_str() );
+            dev_delta[j] += sqrt((avg_delta[j] - delta) * (avg_delta[j] - delta));
+        }
+    }
+
+    //calculate the deviations
+    for (uint32_t j = 0; j < column_names.size(); j++) {
+        dev[j] /= count;
+        dev_delta[j] /= count;
+    }
+
+    (*file) << "#min";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << min[j];
+    (*file) << endl;
+
+    (*file) << "#max";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << max[j];
+    (*file) << endl;
+
+    (*file) << "#avg";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << avg[j];
+    (*file) << endl;
+
+    (*file) << "#dev";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << dev[j];
+    (*file) << endl;
+
+    (*file) << "#min delta";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << min_delta[j];
+    (*file) << endl;
+
+    (*file) << "#max delta";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << max_delta[j];
+    (*file) << endl;
+
+    (*file) << "#avg delta";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << avg_delta[j];
+    (*file) << endl;
+
+    (*file) << "#dev delta";
+    for (uint32_t j = 0; j < column_names.size(); j++) (*file) << " " << dev_delta[j];
+    (*file) << endl;
+
+
+ 
     for (uint32_t i = 0; i < flight_data.size(); i++) {
        vector<string> *flight_row = flight_data.at(i);
+
+        //Skip weird times
+//       if (atoi(flight_row->at(0).c_str()) % 1000 != 0) continue;
 
         for (uint32_t j = 0; j < flight_row->size(); j++) {
             (*file) << " " << flight_row->at(j);
@@ -68,6 +171,10 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
     }
 
     delete file;
+}
+
+bool column_exists(map<string,int> column_name_map, string name) {
+    return column_name_map.find(name) != column_name_map.end();
 }
 
 template <typename T>
@@ -180,7 +287,9 @@ int main(int argc /* number of command line arguments */, char **argv /* command
 //        flight_data_query << "SELECT * FROM main WHERE flight ='" << flight_id << "'";
 //        flight_data_query << "SELECT id, flight, phase, time, msl_altitude, indicated_airspeed, vertical_airspeed, tas, heading, course, pitch_attitude, roll_attitude, eng_1_rpm, vertical_acceleration, longitudinal_acceleration, lateral_acceleration, oat, groundspeed, latitude, longitude, nav_1_freq, nav_2_freq, obs_1, fuel_quantity_left_main, fuel_quantity_right_main, eng_1_fuel_flow, eng_1_oil_press, eng_1_oil_temp, eng_1_cht_1, eng_1_cht_2, eng_1_cht_3, eng_1_cht_4, eng_1_egt_1, eng_1_egt_2, eng_1_egt_3, eng_1_egt_4, system_1_volts, system_2_volts, system_1_amps, system_2_amps FROM main WHERE flight ='" << flight_id << "'";
 
-        flight_data_query << "SELECT roll_attitude, pitch_attitude, indicated_airspeed, eng_1_cht_1, eng_1_cht_2, eng_1_cht_3, eng_1_cht_4, msl_altitude, fuel_quantity_left_main, fuel_quantity_right_main, eng_1_oil_press FROM main WHERE flight = '" << flight_id << "'" << endl;
+//        flight_data_query << "SELECT roll_attitude, pitch_attitude, indicated_airspeed, eng_1_cht_1, eng_1_cht_2, eng_1_cht_3, eng_1_cht_4, msl_altitude, fuel_quantity_left_main, fuel_quantity_right_main, eng_1_oil_press FROM main WHERE flight = '" << flight_id << "'" << endl;
+
+        flight_data_query << "SELECT time, roll_attitude, pitch_attitude, indicated_airspeed, msl_altitude FROM main WHERE flight = '" << flight_id << "'" << endl;
 
         mysql_query_check(conn, flight_data_query.str());
         MYSQL_RES *flight_data_result = mysql_store_result(conn);
@@ -196,6 +305,7 @@ int main(int argc /* number of command line arguments */, char **argv /* command
         long low_oil_pressure_excedence_count = 0;
 
         map<string,int> column_name_map;
+        vector<string> column_names;
 
         bool had_null = false;
 
@@ -218,6 +328,8 @@ int main(int argc /* number of command line arguments */, char **argv /* command
                     }
 
                     column_name_map[ fields[i].name ] = i;
+                    column_names.push_back( fields[i].name );
+                    cout << "field[" << i << "]: " << fields[i].name << endl;
                 }
             }
 
@@ -226,21 +338,10 @@ int main(int argc /* number of command line arguments */, char **argv /* command
             had_null = false;
             for (int i = 0; i < field_count; i++) {
                 if (flight_data_row[i] == NULL) {
-                    /*
-                    map<string,int>::const_iterator it;
-                    string key = "";
-
-                    for (it = column_name_map.begin(); it != column_name_map.end(); ++it) {
-                        if (it->second == i) {
-                            key = it->first;
-                            break;
-                        }
-                    }
 
                     cerr << endl;
-                    cerr << " Error, flight data row[" << key  << "] (row number " << i << ") is null." << endl;
-                    continue;
-                    */
+                    cerr << " Error, flight data row[" << column_names[i] << "] (row number " << i << ") is null." << endl;
+//                    continue;
 
                     flight_row->at(i) = "NULL";
                     had_null = true;
@@ -255,42 +356,43 @@ int main(int argc /* number of command line arguments */, char **argv /* command
             if (had_null) continue;
 
 
-            if ((atof(flight_data_row[ column_name_map.at("roll_attitude") ]) > 60) || (atof(flight_data_row[ column_name_map.at("roll_attitude") ]) < -60)) {
+            if (column_exists(column_name_map, "roll_attitude") && ((atof(flight_data_row[ column_name_map.at("roll_attitude") ]) > 60) || (atof(flight_data_row[ column_name_map.at("roll_attitude") ]) < -60))) {
                 //excessive roll
                 excessive_roll_excedence_count++;
             }
 
-            if ((atof(flight_data_row[ column_name_map.at("pitch_attitude") ]) > 30) || (atof(flight_data_row[ column_name_map.at("pitch_attitude") ]) < -30)) {
+            if (column_exists(column_name_map, "pitch_attitude") && ((atof(flight_data_row[ column_name_map.at("pitch_attitude") ]) > 30) || (atof(flight_data_row[ column_name_map.at("pitch_attitude") ]) < -30))) {
                 //excessive pitch
                 excessive_pitch_excedence_count++;
             }
 
-            if (atof(flight_data_row[ column_name_map.at("indicated_airspeed") ]) > 163) {
+            if (column_exists(column_name_map, "indicated_airspeed") && atof(flight_data_row[ column_name_map.at("indicated_airspeed") ]) > 163) {
                 //excessive speed
                 excessive_speed_excedence_count++;
             }
 
-            if ((atof(flight_data_row[ column_name_map.at("eng_1_cht_1") ]) > 500) ||
-                    (atof(flight_data_row[ column_name_map.at("eng_1_cht_2") ]) > 500) ||
-                    (atof(flight_data_row[ column_name_map.at("eng_1_cht_3") ]) > 500) ||
-                    (atof(flight_data_row[ column_name_map.at("eng_1_cht_4") ]) > 500)) {
+            if (    (column_exists(column_name_map, "eng_1_cht_1") && atof(flight_data_row[ column_name_map.at("eng_1_cht_1") ]) > 500) ||
+                    (column_exists(column_name_map, "eng_1_cht_2") && atof(flight_data_row[ column_name_map.at("eng_1_cht_2") ]) > 500) ||
+                    (column_exists(column_name_map, "eng_1_cht_3") && atof(flight_data_row[ column_name_map.at("eng_1_cht_3") ]) > 500) ||
+                    (column_exists(column_name_map, "eng_1_cht_4") && atof(flight_data_row[ column_name_map.at("eng_1_cht_4") ]) > 500)) {
                 //high CHT 1
                 high_cht_excedence_count++;
             }
 
-            if (atof(flight_data_row[ column_name_map.at("msl_altitude") ]) > 12800) {
+            if (column_exists(column_name_map, "msl_altitude") && atof(flight_data_row[ column_name_map.at("msl_altitude") ]) > 12800) {
                 //high altitude
                 high_altitude_excedence_count++;
             }
 
-            if ((atof(flight_data_row[ column_name_map.at("fuel_quantity_left_main") ]) + atof(flight_data_row[ column_name_map.at("fuel_quantity_right_main") ]) < 8) &&
-                    (atof(flight_data_row[ column_name_map.at("indicated_airspeed") ]) > 30)) {
+            if (column_exists(column_name_map, "fuel_quantity_right_main") && column_exists(column_name_map, "fuel_quantity_left_main") && column_exists(column_name_map, "indicated_airspeed") && 
+                    ((atof(flight_data_row[ column_name_map.at("fuel_quantity_left_main") ]) + atof(flight_data_row[ column_name_map.at("fuel_quantity_right_main") ]) < 8) &&
+                     (atof(flight_data_row[ column_name_map.at("indicated_airspeed") ]) > 30))) {
                 //Low Fuel
                 low_fuel_excedence_count++;
             }
 
-            if ((atof(flight_data_row[ column_name_map.at("eng_1_oil_press") ]) < 20) &&
-                    (atof(flight_data_row[ column_name_map.at("indicated_airspeed") ]) > 30)) {
+            if ((column_exists(column_name_map, "eng_1_oil_press") && atof(flight_data_row[ column_name_map.at("eng_1_oil_press") ]) < 20) &&
+                    (column_exists(column_name_map, "indicated_airspeed") && atof(flight_data_row[ column_name_map.at("indicated_airspeed") ]) > 30)) {
                 //Low oil pressure
                 low_oil_pressure_excedence_count++;
             }
@@ -315,42 +417,42 @@ int main(int argc /* number of command line arguments */, char **argv /* command
 
         if (excessive_roll_excedence_count > 0) {
             excessive_roll_flights++;
-            write_flight_data(output_directory + "excessive_roll/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "excessive_roll/" + to_string(flight_id), flight_data, column_names);
         }
 
         if (excessive_pitch_excedence_count > 0) {
             excessive_pitch_flights++;
-            write_flight_data(output_directory + "excessive_pitch/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "excessive_pitch/" + to_string(flight_id), flight_data, column_names);
         }
 
         if (excessive_speed_excedence_count > 0) {
             excessive_speed_flights++;
-            write_flight_data(output_directory + "excessive_speed/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "excessive_speed/" + to_string(flight_id), flight_data, column_names);
         }
 
         if (high_cht_excedence_count > 0) {
             high_cht_flights++;
-            write_flight_data(output_directory + "high_cht/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "high_cht/" + to_string(flight_id), flight_data, column_names);
         }
 
         if (high_altitude_excedence_count > 0) {
             high_altitude_flights++;
-            write_flight_data(output_directory + "high_altitude/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "high_altitude/" + to_string(flight_id), flight_data, column_names);
         }
 
         if (low_fuel_excedence_count > 0) {
             low_fuel_flights++;
-            write_flight_data(output_directory + "low_fuel/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "low_fuel/" + to_string(flight_id), flight_data, column_names);
         }
 
         if (low_oil_pressure_excedence_count > 0) {
             low_oil_pressure_flights++;
-            write_flight_data(output_directory + "low_oil_pressure/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "low_oil_pressure/" + to_string(flight_id), flight_data, column_names);
         }
 
         if (excessive_roll_excedence_count == 0 && excessive_pitch_excedence_count == 0 && excessive_speed_excedence_count == 0 &&
             high_cht_excedence_count == 0 && high_altitude_excedence_count == 0 && low_fuel_excedence_count == 0 && low_oil_pressure_excedence_count == 0) {
-            write_flight_data(output_directory + "no_excedence/" + to_string(flight_id), flight_data);
+            write_flight_data(output_directory + "no_excedence/" + to_string(flight_id), flight_data, column_names);
         }
 
         while ( !flight_data.empty() ) {

@@ -39,9 +39,12 @@ find_package(MPI)
 
 add_subdirectory(tao)
 
+message(STATUS " mysql include dir: ${MYSQL_INCLUDE_DIR}")
+
 include_directories(tao)
 include_directories(undvc_common)
 include_directories(${MYSQL_INCLUDE_DIR})
+include_directories(${MYSQL_INCLUDE_DIR}/mysql)
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${MPI_INCLUDE_PATH})
 
@@ -55,5 +58,5 @@ add_executable(svm svm)
 target_link_libraries(svm undvc_common ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(artificial_neural_network artificial_neural_network flight_io)
-target_link_libraries(artificial_neural_network undvc_common asynchronous_algorithms mpi_algorithms ${Boost_LIBRARIES})
+target_link_libraries(artificial_neural_network undvc_common asynchronous_algorithms synchronous_algorithms mpi_algorithms ${Boost_LIBRARIES})
 
