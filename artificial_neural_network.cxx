@@ -189,6 +189,7 @@ double objective_function(const vector<double> &parameters) {
         total_error += current_error;
 //        cout << setw(15) << total_error << " - " << setw(10) << current_error << " - " << max_error << endl;
     }
+
     return -(total_error / flight_rows);
 }
 
