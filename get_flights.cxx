@@ -168,7 +168,8 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
 
         for (uint32_t j = 0; j < flight_row->size(); j++) {
             //normalize the flight data between 0 and 1
-            (*file) << " " << ((atof(flight_row->at(j).c_str()) - min[j]) / (max[j] - min[j]));
+//            (*file) << " " << ((atof(flight_row->at(j).c_str()) - min[j]) / (max[j] - min[j]));
+            (*file) << " " << atof(flight_row->at(j).c_str());
         }
         (*file) << endl;
     }

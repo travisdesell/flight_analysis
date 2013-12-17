@@ -74,32 +74,53 @@ class ArtificialNeuralNetwork {
 
         PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
             unsigned int current_weight = 0;
-            for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                hidden_layer[i] = 0;
 
-                for (unsigned int j = 0; j < input_layer_size; j++) {
-                    hidden_layer[i] += weights[current_weight] * input_layer[j];
-                    current_weight++;
-                }
-            }
-
-            if (type != FEED_FORWARD_NETWORK) {
+            if (hidden_layers > 0) {
                 for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                    for (unsigned int j = 0; j < recurrent_layer_size; j++) {
-                        hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
+                    hidden_layer[i] = 0;
+
+                    for (unsigned int j = 0; j < input_layer_size; j++) {
+                        hidden_layer[i] += weights[current_weight] * input_layer[j];
                         current_weight++;
                     }
                 }
-            }
 
-            for (unsigned int i = 0; i < output_layer_size; i++) {
-                output_layer[i] = 0;
-
-                for (unsigned int j = 0; j < hidden_layer_size; j++) {
-                    output_layer[i] += weights[current_weight] * hidden_layer[j];
-                    current_weight++;
+                if (type != FEED_FORWARD_NETWORK) {
+                    for (unsigned int i = 0; i < hidden_layer_size; i++) {
+                        for (unsigned int j = 0; j < recurrent_layer_size; j++) {
+                            hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
+                            current_weight++;
+                        }
+                    }
                 }
 
+                for (unsigned int i = 0; i < output_layer_size; i++) {
+                    output_layer[i] = 0;
+
+                    for (unsigned int j = 0; j < hidden_layer_size; j++) {
+                        output_layer[i] += weights[current_weight] * hidden_layer[j];
+                        current_weight++;
+                    }
+                }
+
+            } else {
+                for (unsigned int i = 0; i < output_layer_size; i++) {
+                    output_layer[i] = 0;
+
+                    for (unsigned int j = 0; j < input_layer_size; j++) {
+                        output_layer[i] += weights[current_weight] * input_layer[j];
+                        current_weight++;
+                    }
+                }
+
+                if (type == JORDAN_NETWORK) {   //can have a jordan network without a hidden layer
+                    for (unsigned int i = 0; i < output_layer_size; i++) {
+                        for (unsigned int j = 0; j < recurrent_layer_size; j++) {
+                            output_layer[i] += weights[current_weight] * recurrent_layer[j];
+                            current_weight++;
+                        }
+                    }
+                }
             }
 
             //Update the recurrent layer.
@@ -107,10 +128,14 @@ class ArtificialNeuralNetwork {
             if (type == ELMAN_NETWORK) {
                 for (unsigned int i = 0; i < hidden_layer_size; i++) {
                     recurrent_layer[i] = hidden_layer[i];
+                    if (recurrent_layer[i] > 2) recurrent_layer[i] = 2;
+                    if (recurrent_layer[i] < -1) recurrent_layer[i] = -1;
                 }
             } else if (type == JORDAN_NETWORK) {
                 for (unsigned int i = 0; i < output_layer_size; i++) {
                     recurrent_layer[i] = output_layer[i];
+                    if (recurrent_layer[i] > 2) recurrent_layer[i] = 2;
+                    if (recurrent_layer[i] < -1) recurrent_layer[i] = -1;
                 }
             }
 
@@ -121,7 +146,7 @@ class ArtificialNeuralNetwork {
                 error += temp * temp;
             }
 
-            return sqrt(error);
+            return error / output_layer_size;
         }
 
 //    friend double objective_function(const vector<double> &);
@@ -129,6 +154,8 @@ class ArtificialNeuralNetwork {
 
 int seconds_into_future = 0;
 double* flight_data = NULL;
+double* flight_data_delta = NULL;
+double* flight_data_delta2 = NULL;
 unsigned int flight_rows;
 unsigned int flight_columns;
 int input_timesteps;
@@ -151,7 +178,7 @@ double objective_function(const vector<double> &parameters) {
         total_error += current_error;
     }
 //    cout << "total_error: " << total_error << endl;
-    return -(total_error / flight_rows);
+    return -(sqrt(total_error) / flight_rows);
 //    cout << "max_error: " << max_error << endl;
 //    return -max_error;
 }
@@ -174,6 +201,11 @@ int main(int argc, char** argv) {
     get_argument(arguments, "--input_filename", true, input_filename);
     read_flight_file(input_filename, flight_rows, flight_columns, flight_data, column_headers);
 
+    //use these to store values for pre-calculated delta (difference between previous 
+    //and current value) and delta^2 (difference between the previous two deltas)
+    flight_data_delta = new double[flight_columns * flight_rows];
+    flight_data_delta2 = new double[flight_columns * flight_rows];
+
     /*
     for (int i = 0; i < flight_rows; i++) {
         for (int j = 0; j < flight_columns; j++) {
@@ -182,6 +214,152 @@ int main(int argc, char** argv) {
         cout << endl;
     }
     */
+
+    //Normalize the flight data -- 1. get min/max for each value
+    vector<double> min(flight_columns, 0), max(flight_columns, 0);
+    for (unsigned int j = 0; j < flight_columns; j++) {
+
+        min[j] = flight_data[j];
+        max[j] = flight_data[j];
+
+        for (unsigned int i = 1; i < flight_rows; i++) {
+            double current = flight_data[(i * flight_columns) + j];
+            if (current > max[j]) max[j] = current;
+            if (current < min[j]) min[j] = current;
+        }
+    }
+
+    //Normalize the flight data -- 2. update the values
+    vector<double> min_delta(flight_columns, 0), max_delta(flight_columns, 0);
+    vector<double> min_delta2(flight_columns, 0), max_delta2(flight_columns, 0);
+    vector<double> avg_delta(flight_columns, 0);
+    vector<double> avg_delta2(flight_columns, 0);
+
+    for (unsigned int j = 0; j < flight_columns; j++) {
+        for (unsigned int i = 0; i < flight_rows; i++) {
+            double current = flight_data[(i * flight_columns) + j];
+
+            flight_data[(i * flight_columns) + j] = (current - min[j]) / (max[j] - min[j]);
+
+            double current_delta, current_delta2;
+            if (i == 0) {
+                current_delta = 0;
+                current_delta2 = 0;
+
+                flight_data_delta[(i * flight_columns) + j] = 0;
+                flight_data_delta2[(i * flight_columns) + j] = 0;
+
+            } else if (i == 1) {
+                current_delta = flight_data[(i * flight_columns) + j] - flight_data[((i-1) * flight_columns) + j];
+                current_delta2 = 0;
+
+                flight_data_delta[(i * flight_columns) + j] = current_delta;
+                flight_data_delta2[(i * flight_columns) + j] = 0;
+            } else {
+                current_delta = flight_data[(i * flight_columns) + j] - flight_data[((i-1) * flight_columns) + j];
+                current_delta2 = current_delta - flight_data_delta[((i-1) * flight_columns) + j];
+
+                flight_data_delta[(i * flight_columns) + j] = current_delta;
+                flight_data_delta2[(i * flight_columns) + j] = current_delta2;
+            }
+
+            if (current_delta > max_delta[j]) max_delta[j] = current_delta;
+            if (current_delta < min_delta[j]) min_delta[j] = current_delta;
+            if (current_delta2 > max_delta2[j]) max_delta2[j] = current_delta2;
+            if (current_delta2 < min_delta2[j]) min_delta2[j] = current_delta2;
+
+            avg_delta[j] += current_delta;
+            avg_delta2[j] += current_delta2;
+        }
+    }
+
+    for (unsigned int j = 0; j < flight_columns; j++) {
+        avg_delta[j] = avg_delta[j] / (flight_rows - 1);
+        avg_delta2[j] = avg_delta2[j] / (flight_rows - 2);
+    }
+
+    cout << "min:       ";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min[i];
+    cout << endl;
+
+    cout << "max:       ";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max[i];
+    cout << endl;
+
+    cout << "min_delta: ";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta[i];
+    cout << endl;
+
+    cout << "max_delta: ";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
+    cout << endl;
+
+    cout << "avg_delta: ";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
+    cout << endl;
+
+    cout << "min_delta2:";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta2[i];
+    cout << endl;
+
+    cout << "max_delta2:";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
+    cout << endl;
+
+    cout << "avg_delta2:";
+    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
+    cout << endl;
+
+    double err_prev = 0, err_delta = 0, err_delta2 = 0;
+
+    for (unsigned int i = 0; i < flight_rows; i++) {
+        double prev_predict = 0, delta_predict = 0, delta2_predict = 0;
+
+        for (unsigned int j = 0; j < flight_columns; j++) {
+            //prediction is the previous value
+            if (i > 0) {
+                double p = flight_data[(i * flight_columns) + j] - flight_data[((i - 1) * flight_columns) + j];
+                prev_predict += p * p;
+            }
+
+            //prediction is the previous value plus the previous delta
+            if (i > 1) {
+                double p = flight_data[(i * flight_columns) + j] - (flight_data[((i - 1) * flight_columns) + j] + flight_data_delta[((i - 1) * flight_columns) + j]);
+                delta_predict += p * p;
+            }
+
+            //prediction is the previous value plus the previous delta plus the change in previous delta
+            if (i > 2) {
+                double p = flight_data[(i * flight_columns) + j] - (flight_data[((i - 1) * flight_columns) + j] + flight_data_delta[((i - 1) * flight_columns) + j] + flight_data_delta2[((i - 1) * flight_columns) + j]);
+                delta2_predict += p * p;
+            }
+        }
+
+        err_prev   += prev_predict / 4;
+        err_delta  += delta_predict / 4;
+        err_delta2 += delta2_predict / 4;
+    }
+
+    err_prev   = sqrt(err_prev)   /  flight_rows;
+    err_delta  = sqrt(err_delta2) / (flight_rows - 1);
+    err_delta2 = sqrt(err_delta2) / (flight_rows - 2);
+
+    cout << "err prev:   " << err_prev << endl;
+    cout << "err delta:  " << err_delta << endl;
+    cout << "err delta2: " << err_delta2 << endl;
+
+
+
+    for (unsigned int i = 0; i < flight_rows; i++) {
+        for (unsigned int j = 0; j < flight_columns; j++) {
+            unsigned int pos = (i * flight_columns) + j;
+
+            cout << "     |" << setw(20) << flight_data[pos] << setw(20) << flight_data_delta[pos] << setw(20) << flight_data_delta2[pos];
+        }
+
+        cout << "     |" << endl;
+    }
+
 
     //determine how many previous timesteps will be fed into the neural network
     get_argument(arguments, "--input_timesteps", true, input_timesteps);
@@ -192,8 +370,8 @@ int main(int argc, char** argv) {
 
 //    int hidden_layer_size  = (input_layer_size + output_layer_size) * 0.2;
     unsigned int hidden_layer_size, hidden_layers;
-    get_argument(arguments, "--hidden_nodes", true, hidden_layer_size);
     get_argument(arguments, "--hidden_layers", true, hidden_layers);
+    hidden_layer_size = hidden_layers * flight_columns;
 
     string network_type_s;
     unsigned int network_type;
@@ -262,9 +440,20 @@ int main(int argc, char** argv) {
         cerr << "total error: " << (total_error / flight_rows) << endl;
 
     } else {
+        int number_of_nodes = 0;
+        if (hidden_layers > 0) {
+            number_of_nodes = (input_layer_size * hidden_layer_size) +      //weights from input layer to 1st hidden layer
+                              (hidden_layer_size * recurrent_layer_size) +  //weights from recurrent layer to 1st hidden layer
+                              (hidden_layer_size * (hidden_layers - 1)) +   //weights between hidden layers
+                              (hidden_layer_size * output_layer_size);      //weights from last hidden lyaer to output layer
 
-        vector<double> min_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), -2.0);
-        vector<double> max_bound((input_layer_size * hidden_layer_size) + (hidden_layer_size * output_layer_size) + (hidden_layer_size * recurrent_layer_size), 2.0);
+        } else {
+            number_of_nodes = (input_layer_size * output_layer_size) +      //weights from input layer to output layer
+                              (recurrent_layer_size * output_layer_size);   //can have a jordan network with no hidden layers
+        }
+
+        vector<double> min_bound(number_of_nodes, -1.0);
+        vector<double> max_bound(number_of_nodes, 1.0);
 
         cout << "number of parameters: " << min_bound.size() << endl;
 
