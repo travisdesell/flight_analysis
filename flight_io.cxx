@@ -81,7 +81,9 @@ void read_flight_file(string input_filename, unsigned int &rows, unsigned int &c
         cout << endl;
         cout << "flight_data.size(): " << flight_data.size() << ", capacity: " << flight_data.capacity() << endl;
         */
-        flight_data.push_back(flight_row);
+//        if (flight_row[2] > 0) {    //only use rows with indicated airspeed > 0
+            flight_data.push_back(flight_row);
+//        }
 
 //        cout << "getting next line" << endl;
         getline( input_file, s);

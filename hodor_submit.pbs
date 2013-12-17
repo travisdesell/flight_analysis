@@ -1,8 +1,8 @@
 #PBS -S /bin/bash
 #PBS -N flight_prediction
-#PBS -l nodes=8:ppn=8,walltime=1:00:00,naccesspolicy=singlejob
-#PBS -o /home/travis.desell/flight_data/output/ps_out_$PBS_JOBID.txt
-#PBS -e /home/travis.desell/flight_data/output/ps_err_$PBS_JOBID.txt
+#PBS -l nodes=8:ppn=8,walltime=0:20:00,naccesspolicy=singlejob
+#PBS -o /home/travis.desell/flight_data/output/de_out_i3_r_$PBS_JOBID.txt
+#PBS -e /home/travis.desell/flight_data/output/de_err_i3_r_$PBS_JOBID.txt
 ###PBS -m abe
 #PBS -M tdesell@cs.und.edu
 ###PBS -q priority
@@ -11,4 +11,4 @@
 env | grep PBS
 echo $PBS_NP
 cd ~/flight_analysis/build
-/opt/mvapich2-x/gnu/bin/mpiexec -machinefile ~/hodor_nodes_mvapich -np 64 ./artificial_neural_network --input_filename /home/travis.desell/flight_data/no_excedence/14799 --input_timesteps 3 --output_timesteps 1 --recurrent --hidden_nodes 3 --hidden_layers 1 --search_type ps_mpi --population_size 3000 --parent_type best --number_pairs 2 --seconds_into_future 4
+/opt/mvapich2-x/gnu/bin/mpiexec -machinefile ~/hodor_nodes_mvapich -np 64 ./artificial_neural_network --input_filename /home/travis.desell/flight_data/gecco_data/no_excedence/13588 --input_timesteps 1 --output_timesteps 1 --hidden_layers 0 --network_type feed_forward --search_type de_mpi --population_size 3000 --inertia_weight 0.95 --parent_type best --number_pairs 2 --seconds_into_future 0

@@ -22,6 +22,8 @@ using std::vector;
 
 #include <stdint.h>
 
+#include <limits>
+
 /**
  *  For MYSQL
  */
@@ -165,7 +167,9 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
 //       if (atoi(flight_row->at(0).c_str()) % 1000 != 0) continue;
 
         for (uint32_t j = 0; j < flight_row->size(); j++) {
-            (*file) << " " << flight_row->at(j);
+            //normalize the flight data between 0 and 1
+//            (*file) << " " << ((atof(flight_row->at(j).c_str()) - min[j]) / (max[j] - min[j]));
+            (*file) << " " << atof(flight_row->at(j).c_str());
         }
         (*file) << endl;
     }
@@ -309,7 +313,7 @@ int main(int argc /* number of command line arguments */, char **argv /* command
 
         bool had_null = false;
 
-        int field_count;
+        int field_count = 0;
         vector< vector<string>* > flight_data;
         //Need to clean this up after processing a flight
 
