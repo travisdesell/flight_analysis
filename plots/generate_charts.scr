@@ -1,3 +1,3 @@
 #! /bin/bash
 
-gnuplot -e "input_file='$1';altitude_output_file='altitude_$2.png';pitch_output_file='pitch_$2.png';roll_output_file='roll_$2.png'" gnuplot_script.scr
+gnuplot -e "input_file='$1';altitude_output_file='altitude_$2.png';pitch_output_file='pitch_$2.png';roll_output_file='roll_$2.png';airspeed_output_file='airspeed_$2.png'" gnuplot_script.scr

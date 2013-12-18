@@ -163,8 +163,7 @@ int output_timesteps;
 ArtificialNeuralNetwork *ann;
 
 double objective_function(const vector<double> &parameters) {
-
-    double max_error = 0;
+//    double max_error = 0;
     double total_error = 0;
     double current_error;
     
@@ -279,35 +278,35 @@ int main(int argc, char** argv) {
         avg_delta2[j] = avg_delta2[j] / (flight_rows - 2);
     }
 
-    cout << "min:       ";
+    cout << "#min:       ";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min[i];
     cout << endl;
 
-    cout << "max:       ";
+    cout << "#max:       ";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max[i];
     cout << endl;
 
-    cout << "min_delta: ";
+    cout << "#min_delta: ";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta[i];
     cout << endl;
 
-    cout << "max_delta: ";
+    cout << "#max_delta: ";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
     cout << endl;
 
-    cout << "avg_delta: ";
+    cout << "#avg_delta: ";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
     cout << endl;
 
-    cout << "min_delta2:";
+    cout << "#min_delta2:";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta2[i];
     cout << endl;
 
-    cout << "max_delta2:";
+    cout << "#max_delta2:";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
     cout << endl;
 
-    cout << "avg_delta2:";
+    cout << "#avg_delta2:";
     for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
     cout << endl;
 
@@ -345,12 +344,11 @@ int main(int argc, char** argv) {
     err_delta  = sqrt(err_delta2) / (flight_rows - 1);
     err_delta2 = sqrt(err_delta2) / (flight_rows - 2);
 
-    cout << "err prev:   " << err_prev << endl;
-    cout << "err delta:  " << err_delta << endl;
-    cout << "err delta2: " << err_delta2 << endl;
+    cout << "#err prev:   " << err_prev << endl;
+    cout << "#err delta:  " << err_delta << endl;
+    cout << "#err delta2: " << err_delta2 << endl;
 
-
-
+    /*
     for (unsigned int i = 0; i < flight_rows; i++) {
         for (unsigned int j = 0; j < flight_columns; j++) {
             unsigned int pos = (i * flight_columns) + j;
@@ -360,6 +358,7 @@ int main(int argc, char** argv) {
 
         cout << "     |" << endl;
     }
+    */
 
 
     //determine how many previous timesteps will be fed into the neural network
@@ -396,17 +395,17 @@ int main(int argc, char** argv) {
     }
 
     get_argument(arguments, "--seconds_into_future", false, seconds_into_future);
-    cout << "seconds into future: " << seconds_into_future << endl;
+    cout << "#seconds into future: " << seconds_into_future << endl;
 
 
-    cout << "input  timesteps: " << input_timesteps << endl;
-    cout << "output timesteps: " << output_timesteps << endl;
+    cout << "#input  timesteps: " << input_timesteps << endl;
+    cout << "#output timesteps: " << output_timesteps << endl;
 
-    cout << "input     layer size: " << input_layer_size << endl;
-    cout << "hidden    layer size: " << hidden_layer_size << endl;
-    cout << "output    layer size: " << output_layer_size << endl;
+    cout << "#input     layer size: " << input_layer_size << endl;
+    cout << "#hidden    layer size: " << hidden_layer_size << endl;
+    cout << "#output    layer size: " << output_layer_size << endl;
 
-    cout << "network type: " << network_type << endl;
+    cout << "#network type: " << network_type << endl;
 
     srand48(time(NULL));
 
@@ -414,7 +413,7 @@ int main(int argc, char** argv) {
 
     string ann_parameters;
     if (get_argument(arguments, "--test_ann", false, ann_parameters)) {
-        cout << "testing ann: '" << ann_parameters << "'" << endl;
+        cout << "#testing ann: '" << ann_parameters << "'" << endl;
         vector<double> ann_parameters_v;
         string_to_vector(ann_parameters, ann_parameters_v);
 
@@ -438,7 +437,7 @@ int main(int argc, char** argv) {
 
             total_error += current_error;
         }
-        cerr << "total error: " << (total_error / flight_rows) << endl;
+        cerr << "total error: " << (sqrt(total_error) / flight_rows) << endl;
 
     } else {
         int number_of_nodes = 0;

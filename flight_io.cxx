@@ -43,7 +43,7 @@ void read_flight_file(string input_filename, unsigned int &rows, unsigned int &c
 //        cout << "pushed back '" << *i << "'" << endl;
     }
     cols = column_headers.size() - 2;
-    cout << "cols: " << cols << endl;
+//    cout << "cols: " << cols << endl;
 
     vector< vector<double> > flight_data;
     getline( input_file, s );
