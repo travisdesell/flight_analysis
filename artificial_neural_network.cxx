@@ -144,6 +144,7 @@ class ArtificialNeuralNetwork {
             for (unsigned int i = 0; i < output_layer_size; i++) {
                 temp = output_layer[i] - expected_output[i];
                 error += temp * temp;
+//                error += fabs(temp);
             }
 
             return error / output_layer_size;
@@ -162,16 +163,33 @@ int input_timesteps;
 int output_timesteps;
 ArtificialNeuralNetwork *ann;
 
+double *input_data;
+
 double objective_function(const vector<double> &parameters) {
-//    double max_error = 0;
     double total_error = 0;
     double current_error;
     
     ann->reset();
 
     for (unsigned int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
-        current_error = ann->evaluate( parameters, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
-//        if (current_error > max_error) max_error = current_error;
+
+        for (unsigned int j = 0; j < flight_columns; j++) input_data[j] = flight_data[(i * flight_columns) + j];
+        if (input_timesteps == 2) {
+            for (unsigned int j = 0; j < flight_columns; j++) input_data[j + flight_columns] = flight_data_delta[(i * flight_columns) + j];
+        } else if (input_timesteps == 3) {
+            for (unsigned int j = 0; j < flight_columns; j++) input_data[j + flight_columns + flight_columns] = flight_data_delta2[(i * flight_columns) + j];
+        }
+
+        /*
+        for (int k = 0; k < input_timesteps * flight_columns; k++) {
+            cout << " " << input_data[k];
+        }
+        cout << endl;
+        */
+
+        current_error = ann->evaluate( parameters, input_data, &(flight_data[(i + 1 + seconds_into_future) * flight_columns]) );
+//        current_error = ann->evaluate( parameters, input_data, &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
+//        current_error = ann->evaluate( parameters, &(flight_data[i * flight_columns]), &(flight_data[(i + input_timesteps + seconds_into_future) * flight_columns]) );
 
 //        cout << setw(15) << total_error << " - " << setw(10) << current_error << " - " << max_error << endl;
         total_error += current_error;
@@ -179,8 +197,6 @@ double objective_function(const vector<double> &parameters) {
 
 //    cout << "total_error: " << total_error << endl;
     return -(sqrt(total_error) / flight_rows);
-//    cout << "max_error: " << max_error << endl;
-//    return -max_error;
 }
 
 int main(int argc, char** argv) {
@@ -191,7 +207,6 @@ int main(int argc, char** argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &max_rank);
 
     //cout << "process: " << rank << " of " << max_rank << endl;
-
 
     vector<string> arguments(argv, argv + argc);
     
@@ -320,18 +335,21 @@ int main(int argc, char** argv) {
             if (i > 0) {
                 double p = flight_data[(i * flight_columns) + j] - flight_data[((i - 1) * flight_columns) + j];
                 prev_predict += p * p;
+//                prev_predict += fabs(p);
             }
 
             //prediction is the previous value plus the previous delta
             if (i > 1) {
                 double p = flight_data[(i * flight_columns) + j] - (flight_data[((i - 1) * flight_columns) + j] + flight_data_delta[((i - 1) * flight_columns) + j]);
                 delta_predict += p * p;
+//                delta_predict += fabs(p);
             }
 
             //prediction is the previous value plus the previous delta plus the change in previous delta
             if (i > 2) {
                 double p = flight_data[(i * flight_columns) + j] - (flight_data[((i - 1) * flight_columns) + j] + flight_data_delta[((i - 1) * flight_columns) + j] + flight_data_delta2[((i - 1) * flight_columns) + j]);
                 delta2_predict += p * p;
+//                delta2_predict += fabs(p);
             }
         }
 
@@ -343,6 +361,12 @@ int main(int argc, char** argv) {
     err_prev   = sqrt(err_prev)   /  flight_rows;
     err_delta  = sqrt(err_delta2) / (flight_rows - 1);
     err_delta2 = sqrt(err_delta2) / (flight_rows - 2);
+
+    /*
+    err_prev   = err_prev   /  flight_rows;
+    err_delta  = err_delta2 / (flight_rows - 1);
+    err_delta2 = err_delta2 / (flight_rows - 2);
+    */
 
     cout << "#err prev:   " << err_prev << endl;
     cout << "#err delta:  " << err_delta << endl;
@@ -366,6 +390,8 @@ int main(int argc, char** argv) {
     get_argument(arguments, "--output_timesteps", true, output_timesteps);
 
     unsigned int input_layer_size = input_timesteps * flight_columns;
+    input_data = new double[input_layer_size];
+
     unsigned int output_layer_size = output_timesteps * flight_columns;
 
 //    int hidden_layer_size  = (input_layer_size + output_layer_size) * 0.2;
@@ -452,8 +478,8 @@ int main(int argc, char** argv) {
                               (recurrent_layer_size * output_layer_size);   //can have a jordan network with no hidden layers
         }
 
-        vector<double> min_bound(number_of_nodes, -1.0);
-        vector<double> max_bound(number_of_nodes, 1.0);
+        vector<double> min_bound(number_of_nodes, -2.0);
+        vector<double> max_bound(number_of_nodes, 2.0);
 
         cout << "number of parameters: " << min_bound.size() << endl;
 
@@ -500,9 +526,16 @@ int main(int argc, char** argv) {
         } else if (search_type.compare("snm") == 0 || search_type.compare("gd") == 0 || search_type.compare("cgd") == 0) {
             srand48(time(NULL));
 
+            string starting_point_s;
             vector<double> starting_point(min_bound.size(), 0);
-            for (unsigned int i = 0; i < min_bound.size(); i++) {
-                starting_point[i] = min_bound[i] + ((max_bound[i] - min_bound[i]) * drand48());
+
+            if (get_argument(arguments, "--starting_point", false, starting_point_s)) {
+                cout << "#starting point: '" << starting_point_s << "'" << endl;
+                string_to_vector(starting_point_s, starting_point);
+            } else {
+                for (unsigned int i = 0; i < min_bound.size(); i++) {
+                    starting_point[i] = min_bound[i] + ((max_bound[i] - min_bound[i]) * drand48());
+                }
             }
 
             vector<double> step_size(min_bound.size(), 0.001);
