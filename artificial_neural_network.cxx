@@ -41,6 +41,8 @@ class ArtificialNeuralNetwork {
         const unsigned int output_layer_size;
         const unsigned int recurrent_layer_size;
 
+        const bool use_bias;
+
         const unsigned int type;
 
         PRECISION *hidden_layer;
@@ -56,54 +58,40 @@ class ArtificialNeuralNetwork {
             return output_layer[i];
         }
 
-        ArtificialNeuralNetwork(unsigned int ils, unsigned int hl, unsigned int hls, unsigned int ols, unsigned int rls, unsigned int t) : input_layer_size(ils), hidden_layers(hl), hidden_layer_size(hls), output_layer_size(ols), recurrent_layer_size(rls), type(t) {
+        ArtificialNeuralNetwork(unsigned int ils,
+                                unsigned int hl,
+                                unsigned int hls,
+                                unsigned int ols,
+                                unsigned int rls,
+                                bool ub,
+                                unsigned int t) : 
+                                input_layer_size(ils),
+                                hidden_layers(hl),
+                                hidden_layer_size(hls),
+                                output_layer_size(ols),
+                                recurrent_layer_size(rls),
+                                use_bias(ub),
+                                type(t) {
+
             hidden_layer = new PRECISION[hidden_layer_size * hidden_layers];
             output_layer = new PRECISION[output_layer_size];
 
-            if (type != FEED_FORWARD_NETWORK) { //feed forward NNs do not have a recurrent layer
-                recurrent_layer = new PRECISION[recurrent_layer_size];
-                for (unsigned int i = 0; i < recurrent_layer_size * hidden_layers; i++) recurrent_layer[i] = 0;
-            }
+            if (type != FEED_FORWARD_NETWORK) recurrent_layer = new PRECISION[recurrent_layer_size];
+            reset();
         }
 
         void reset() {
-            if (type != FEED_FORWARD_NETWORK) { //feed forward NNs do not have a recurrent layer
-                for (unsigned int i = 0; i < recurrent_layer_size; i++) recurrent_layer[i] = 0;
+            if (type != FEED_FORWARD_NETWORK) {
+                for (unsigned int i = 0; i < recurrent_layer_size; i++) {
+                    recurrent_layer[i] = 0;
+                }
             }
         }
 
         PRECISION evaluate(const vector<PRECISION> &weights, const double *input_layer, const double *expected_output) {
             unsigned int current_weight = 0;
 
-            if (hidden_layers > 0) {
-                for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                    hidden_layer[i] = 0;
-
-                    for (unsigned int j = 0; j < input_layer_size; j++) {
-                        hidden_layer[i] += weights[current_weight] * input_layer[j];
-                        current_weight++;
-                    }
-                }
-
-                if (type != FEED_FORWARD_NETWORK) {
-                    for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                        for (unsigned int j = 0; j < recurrent_layer_size; j++) {
-                            hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
-                            current_weight++;
-                        }
-                    }
-                }
-
-                for (unsigned int i = 0; i < output_layer_size; i++) {
-                    output_layer[i] = 0;
-
-                    for (unsigned int j = 0; j < hidden_layer_size; j++) {
-                        output_layer[i] += weights[current_weight] * hidden_layer[j];
-                        current_weight++;
-                    }
-                }
-
-            } else {
+            if (hidden_layers == 0) {
                 for (unsigned int i = 0; i < output_layer_size; i++) {
                     output_layer[i] = 0;
 
@@ -121,21 +109,80 @@ class ArtificialNeuralNetwork {
                         }
                     }
                 }
+
+            } else {    //hidden layers > 0
+                //Apply weights and inputs to first hidden layer
+                for (unsigned int i = 0; i < hidden_layer_size; i++) {
+                    if (use_bias) {
+                        hidden_layer[i] += weights[current_weight];
+                        current_weight++;
+                    } else {
+                        hidden_layer[i] = 0;
+                    }
+
+                    for (unsigned int j = 0; j < input_layer_size; j++) {
+                        hidden_layer[i] += weights[current_weight] * input_layer[j];
+                        current_weight++;
+                    }
+                }
+
+                if (type != FEED_FORWARD_NETWORK) {
+                    //Apply the recurrent layer to the first hidden layer (if there is a recurrent layer)
+                    for (unsigned int i = 0; i < hidden_layer_size; i++) {
+                        for (unsigned int j = 0; j < recurrent_layer_size; j++) {
+                            hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
+                            current_weight++;
+                        }
+                    }
+                }
+
+                for (unsigned int i = 1; i < hidden_layers; i++) {
+                    for (unsigned int j = 0; j < hidden_layer_size; j++) {
+                        if (use_bias) {
+                            hidden_layer[(i * hidden_layer_size) + j] = weights[current_weight];
+                            current_weight++;
+                        } else {
+                            hidden_layer[(i * hidden_layer_size) + j] = 0;
+                        }
+
+                        for (unsigned int k = 0; k < hidden_layer_size; k++) {
+                            hidden_layer[(i * hidden_layer_size) + j] += weights[current_weight] * hidden_layer[((i - 1) * hidden_layer_size) + j];
+                            current_weight++;
+                        }
+                    }
+                }
+
+                for (unsigned int i = 0; i < output_layer_size; i++) {
+                    output_layer[i] = 0;
+
+                    for (unsigned int j = 0; j < hidden_layer_size; j++) {
+                        output_layer[i] += weights[current_weight] * hidden_layer[((hidden_layers - 1) * hidden_layer_size) + j];
+                        current_weight++;
+                    }
+                }
             }
+
+            if (use_bias) {
+                for (unsigned int i = 0; i < output_layer_size; i++) {
+                    output_layer[i] += weights[current_weight];
+                    current_weight++;
+                }
+            }
+
 
             //Update the recurrent layer.
             //Need to update for mutliple hidden layers
             if (type == ELMAN_NETWORK) {
                 for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                    recurrent_layer[i] = hidden_layer[i];
-                    if (recurrent_layer[i] > 2) recurrent_layer[i] = 2;
-                    if (recurrent_layer[i] < -1) recurrent_layer[i] = -1;
+                    recurrent_layer[i] = hidden_layer[((hidden_layers - 1) * hidden_layer_size) + i];
+                    if (recurrent_layer[i] > 3) recurrent_layer[i] = 3;
+                    if (recurrent_layer[i] < -2) recurrent_layer[i] = -2;
                 }
             } else if (type == JORDAN_NETWORK) {
                 for (unsigned int i = 0; i < output_layer_size; i++) {
                     recurrent_layer[i] = output_layer[i];
-                    if (recurrent_layer[i] > 2) recurrent_layer[i] = 2;
-                    if (recurrent_layer[i] < -1) recurrent_layer[i] = -1;
+                    if (recurrent_layer[i] > 3) recurrent_layer[i] = 3;
+                    if (recurrent_layer[i] < -2) recurrent_layer[i] = -2;
                 }
             }
 
@@ -150,7 +197,6 @@ class ArtificialNeuralNetwork {
             return error / output_layer_size;
         }
 
-//    friend double objective_function(const vector<double> &);
 };
 
 int seconds_into_future = 0;
@@ -389,30 +435,20 @@ int main(int argc, char** argv) {
     get_argument(arguments, "--input_timesteps", true, input_timesteps);
     get_argument(arguments, "--output_timesteps", true, output_timesteps);
 
-    unsigned int input_layer_size = input_timesteps * flight_columns;
-    input_data = new double[input_layer_size];
+    input_data = new double[input_timesteps * flight_columns];
 
-    unsigned int output_layer_size = output_timesteps * flight_columns;
-
-//    int hidden_layer_size  = (input_layer_size + output_layer_size) * 0.2;
-    unsigned int hidden_layer_size, hidden_layers;
+    unsigned int hidden_layers;
     get_argument(arguments, "--hidden_layers", true, hidden_layers);
-    hidden_layer_size = hidden_layers * flight_columns;
 
     string network_type_s;
     unsigned int network_type;
     get_argument(arguments, "--network_type", true, network_type_s);
 
-    int recurrent_layer_size = 0;
-    if (0 == network_type_s.compare("feed_forward")) {
-        network_type = ArtificialNeuralNetwork::FEED_FORWARD_NETWORK;
-    } else if (0 == network_type_s.compare("elman")) {
-        network_type = ArtificialNeuralNetwork::ELMAN_NETWORK;
-        recurrent_layer_size = hidden_layer_size;
-    } else if (0 == network_type_s.compare("jordan")) {
-        network_type = ArtificialNeuralNetwork::JORDAN_NETWORK;
-        recurrent_layer_size = output_layer_size;
-    } else {
+    int recurrent_layers = 0;
+    if (0 == network_type_s.compare("feed_forward"))    network_type = ArtificialNeuralNetwork::FEED_FORWARD_NETWORK;
+    else if (0 == network_type_s.compare("elman"))      network_type = ArtificialNeuralNetwork::ELMAN_NETWORK;
+    else if (0 == network_type_s.compare("jordan"))     network_type = ArtificialNeuralNetwork::JORDAN_NETWORK;
+    else {
         cerr << "Unknown 'network_type' argument, possibilities:" << endl;
         cerr << "    feed_forward" << endl;
         cerr << "    elman" << endl;
@@ -420,22 +456,24 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
+    if (network_type != ArtificialNeuralNetwork::FEED_FORWARD_NETWORK) recurrent_layers = 1;
+
     get_argument(arguments, "--seconds_into_future", false, seconds_into_future);
     cout << "#seconds into future: " << seconds_into_future << endl;
 
-
-    cout << "#input  timesteps: " << input_timesteps << endl;
-    cout << "#output timesteps: " << output_timesteps << endl;
-
-    cout << "#input     layer size: " << input_layer_size << endl;
-    cout << "#hidden    layer size: " << hidden_layer_size << endl;
-    cout << "#output    layer size: " << output_layer_size << endl;
-
     cout << "#network type: " << network_type << endl;
+
+    cout << "#input  layer:         " << input_timesteps  << " x " << flight_columns << endl;
+    cout << "#hidden layer:         " << hidden_layers    << " x " << flight_columns << endl;
+    cout << "#output layer:         " << output_timesteps << " x " << flight_columns << endl;
+    cout << "#recurrent layer:      " << recurrent_layers << " x " << flight_columns << endl;
 
     srand48(time(NULL));
 
-    ann = new ArtificialNeuralNetwork(input_layer_size, hidden_layers, hidden_layer_size, output_layer_size, recurrent_layer_size, network_type);
+    bool use_bias = false;
+    use_bias = argument_exists(arguments, "--use_bias");
+
+    ann = new ArtificialNeuralNetwork(input_timesteps * flight_columns, hidden_layers, flight_columns, output_timesteps * flight_columns, recurrent_layers * flight_columns, use_bias, network_type);
 
     string ann_parameters;
     if (get_argument(arguments, "--test_ann", false, ann_parameters)) {
@@ -467,6 +505,11 @@ int main(int argc, char** argv) {
 
     } else {
         int number_of_nodes = 0;
+        unsigned int input_layer_size = input_timesteps * flight_columns;
+        unsigned int hidden_layer_size = flight_columns;
+        unsigned int output_layer_size = flight_columns;
+        unsigned int recurrent_layer_size = flight_columns;
+
         if (hidden_layers > 0) {
             number_of_nodes = (input_layer_size * hidden_layer_size) +      //weights from input layer to 1st hidden layer
                               (hidden_layer_size * recurrent_layer_size) +  //weights from recurrent layer to 1st hidden layer
@@ -478,8 +521,13 @@ int main(int argc, char** argv) {
                               (recurrent_layer_size * output_layer_size);   //can have a jordan network with no hidden layers
         }
 
-        vector<double> min_bound(number_of_nodes, -2.0);
-        vector<double> max_bound(number_of_nodes, 2.0);
+        if (use_bias) {
+            number_of_nodes += flight_columns +                             //weights to output_layer
+                               (flight_columns * hidden_layers);            //bias weights to each hidden layer
+        }
+
+        vector<double> min_bound(number_of_nodes, -1.0);
+        vector<double> max_bound(number_of_nodes, 1.0);
 
         cout << "number of parameters: " << min_bound.size() << endl;
 
