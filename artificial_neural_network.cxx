@@ -380,37 +380,39 @@ int main(int argc, char** argv) {
         avg_delta2[j] = avg_delta2[j] / (flight_rows - 2);
     }
 
-    cout << "#min:       ";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min[i];
-    cout << endl;
+    if (rank == 0) {
+        cout << "#min:       ";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min[i];
+        cout << endl;
 
-    cout << "#max:       ";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max[i];
-    cout << endl;
+        cout << "#max:       ";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max[i];
+        cout << endl;
 
-    cout << "#min_delta: ";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta[i];
-    cout << endl;
+        cout << "#min_delta: ";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta[i];
+        cout << endl;
 
-    cout << "#max_delta: ";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
-    cout << endl;
+        cout << "#max_delta: ";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
+        cout << endl;
 
-    cout << "#avg_delta: ";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
-    cout << endl;
+        cout << "#avg_delta: ";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
+        cout << endl;
 
-    cout << "#min_delta2:";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta2[i];
-    cout << endl;
+        cout << "#min_delta2:";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min_delta2[i];
+        cout << endl;
 
-    cout << "#max_delta2:";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
-    cout << endl;
+        cout << "#max_delta2:";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
+        cout << endl;
 
-    cout << "#avg_delta2:";
-    for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
-    cout << endl;
+        cout << "#avg_delta2:";
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
+        cout << endl;
+    }
 
     double err_prev = 0, err_delta = 0, err_delta2 = 0;
 
@@ -455,9 +457,11 @@ int main(int argc, char** argv) {
     err_delta  = err_delta2 / (flight_rows - 1);
     err_delta2 = err_delta2 / (flight_rows - 2);
 
-    cout << "#err prev:   " << err_prev << endl;
-    cout << "#err delta:  " << err_delta << endl;
-    cout << "#err delta2: " << err_delta2 << endl;
+    if (rank == 0) {
+        cout << "#err prev:   " << err_prev << endl;
+        cout << "#err delta:  " << err_delta << endl;
+        cout << "#err delta2: " << err_delta2 << endl;
+    }
 
     /*
     for (unsigned int i = 0; i < flight_rows; i++) {
@@ -500,14 +504,17 @@ int main(int argc, char** argv) {
     if (network_type != ArtificialNeuralNetwork::FEED_FORWARD_NETWORK) recurrent_layers = 1;
 
     get_argument(arguments, "--seconds_into_future", false, seconds_into_future);
-    cout << "#seconds into future: " << seconds_into_future << endl;
 
-    cout << "#network type: " << network_type << endl;
+    if (rank == 0) {
+        cout << "#seconds into future: " << seconds_into_future << endl;
 
-    cout << "#input  layer:         " << input_timesteps  << " x " << flight_columns << endl;
-    cout << "#hidden layer:         " << hidden_layers    << " x " << flight_columns << endl;
-    cout << "#output layer:         " << output_timesteps << " x " << flight_columns << endl;
-    cout << "#recurrent layer:      " << recurrent_layers << " x " << flight_columns << endl;
+        cout << "#network type: " << network_type << endl;
+
+        cout << "#input  layer:         " << input_timesteps  << " x " << flight_columns << endl;
+        cout << "#hidden layer:         " << hidden_layers    << " x " << flight_columns << endl;
+        cout << "#output layer:         " << output_timesteps << " x " << flight_columns << endl;
+        cout << "#recurrent layer:      " << recurrent_layers << " x " << flight_columns << endl;
+    }
 
     srand48(time(NULL));
 
@@ -570,7 +577,9 @@ int main(int argc, char** argv) {
         vector<double> min_bound(number_of_nodes, -1.0);
         vector<double> max_bound(number_of_nodes, 1.0);
 
-        cout << "number of parameters: " << min_bound.size() << endl;
+        if (rank == 0) {
+            cout << "number of parameters: " << min_bound.size() << endl;
+        }
 
         string search_type;
         get_argument(arguments, "--search_type", true, search_type);
