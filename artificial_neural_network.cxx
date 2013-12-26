@@ -549,7 +549,8 @@ int main(int argc, char** argv) {
         unsigned int input_layer_size = input_timesteps * flight_columns;
         unsigned int hidden_layer_size = flight_columns;
         unsigned int output_layer_size = flight_columns;
-        unsigned int recurrent_layer_size = flight_columns;
+        unsigned int recurrent_layer_size = 0;
+        if (recurrent_layers > 0) recurrent_layer_size = recurrent_layers * flight_columns;
 
         if (hidden_layers > 0) {
             number_of_nodes = (input_layer_size * hidden_layer_size) +      //weights from input layer to 1st hidden layer
@@ -567,8 +568,8 @@ int main(int argc, char** argv) {
                                (flight_columns * hidden_layers);            //bias weights to each hidden layer
         }
 
-        vector<double> min_bound(number_of_nodes, -1.0);
-        vector<double> max_bound(number_of_nodes, 1.0);
+        vector<double> min_bound(number_of_nodes, -2.0);
+        vector<double> max_bound(number_of_nodes, 2.0);
 
         cout << "number of parameters: " << min_bound.size() << endl;
 
