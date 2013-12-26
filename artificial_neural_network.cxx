@@ -115,6 +115,9 @@ class ArtificialNeuralNetwork {
                 for (unsigned int i = 0; i < hidden_layer_size; i++) {
                     if (use_bias) {
                         hidden_layer[i] += weights[current_weight];
+                        if (hidden_layer[i] >  1) hidden_layer[i] =  1;
+                        if (hidden_layer[i] < -1) hidden_layer[i] = -1;
+
                         current_weight++;
                     } else {
                         hidden_layer[i] = 0;
@@ -131,6 +134,9 @@ class ArtificialNeuralNetwork {
                     for (unsigned int i = 0; i < hidden_layer_size; i++) {
                         for (unsigned int j = 0; j < recurrent_layer_size; j++) {
                             hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
+                            if (hidden_layer[i] >  1) hidden_layer[i] =  1;
+                            if (hidden_layer[i] < -1) hidden_layer[i] = -1;
+
                             current_weight++;
                         }
                     }
@@ -140,6 +146,9 @@ class ArtificialNeuralNetwork {
                     for (unsigned int j = 0; j < hidden_layer_size; j++) {
                         if (use_bias) {
                             hidden_layer[(i * hidden_layer_size) + j] = weights[current_weight];
+                            if (hidden_layer[(i * hidden_layer_size) + j] >  1) hidden_layer[i] =  1;
+                            if (hidden_layer[(i * hidden_layer_size) + j] < -1) hidden_layer[i] = -1;
+
                             current_weight++;
                         } else {
                             hidden_layer[(i * hidden_layer_size) + j] = 0;
@@ -147,6 +156,9 @@ class ArtificialNeuralNetwork {
 
                         for (unsigned int k = 0; k < hidden_layer_size; k++) {
                             hidden_layer[(i * hidden_layer_size) + j] += weights[current_weight] * hidden_layer[((i - 1) * hidden_layer_size) + j];
+                            if (hidden_layer[(i * hidden_layer_size) + j] >  1) hidden_layer[i] =  1;
+                            if (hidden_layer[(i * hidden_layer_size) + j] < -1) hidden_layer[i] = -1;
+
                             current_weight++;
                         }
                     }
@@ -157,6 +169,9 @@ class ArtificialNeuralNetwork {
 
                     for (unsigned int j = 0; j < hidden_layer_size; j++) {
                         output_layer[i] += weights[current_weight] * hidden_layer[((hidden_layers - 1) * hidden_layer_size) + j];
+                        if (output_layer[i] >  1) output_layer[i] =  1;
+                        if (output_layer[i] < -1) output_layer[i] = -1;
+
                         current_weight++;
                     }
                 }
@@ -165,6 +180,9 @@ class ArtificialNeuralNetwork {
             if (use_bias) {
                 for (unsigned int i = 0; i < output_layer_size; i++) {
                     output_layer[i] += weights[current_weight];
+                    if (output_layer[i] >  1) output_layer[i] =  1;
+                    if (output_layer[i] < -1) output_layer[i] = -1;
+
                     current_weight++;
                 }
             }
@@ -245,6 +263,21 @@ double objective_function(const vector<double> &parameters) {
         total_error += current_error;
 //        if (current_error > max_error) max_error = current_error;
     }
+
+    /*
+    if (total_error != total_error) {
+        cerr << "ERROR! total error is not a number!" << endl;
+        cout << "ERROR! total error is not a number!" << endl;
+        exit(0);
+    }
+
+    if (isinf(total_error)) {
+        cerr << "ERROR! total error is infinity!" << endl;
+        cout << "ERROR! total error is infinity!" << endl;
+        exit(0);
+    }
+    */
+
 
 //    cout << "total_error: " << total_error << endl;
     return -(total_error / flight_rows);
