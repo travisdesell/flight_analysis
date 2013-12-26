@@ -141,13 +141,16 @@ class ArtificialNeuralNetwork {
 
             PRECISION error = 0.0;
             PRECISION temp;
+//            PRECISION max_error = 0;
             for (unsigned int i = 0; i < output_layer_size; i++) {
                 temp = output_layer[i] - expected_output[i];
-                error += temp * temp;
-//                error += fabs(temp);
+//                if (fabs(temp) > max_error) max_error = fabs(temp);
+//                error += temp * temp;
+                error += fabs(temp);
             }
 
             return error / output_layer_size;
+//            return max_error;
         }
 
 //    friend double objective_function(const vector<double> &);
@@ -168,6 +171,7 @@ double *input_data;
 double objective_function(const vector<double> &parameters) {
     double total_error = 0;
     double current_error;
+//    double max_error = 0;
     
     ann->reset();
 
@@ -193,10 +197,14 @@ double objective_function(const vector<double> &parameters) {
 
 //        cout << setw(15) << total_error << " - " << setw(10) << current_error << " - " << max_error << endl;
         total_error += current_error;
+//        if (current_error > max_error) max_error = current_error;
     }
 
 //    cout << "total_error: " << total_error << endl;
-    return -(sqrt(total_error) / flight_rows);
+    return -(total_error / flight_rows);
+//    return -(sqrt(total_error) / flight_rows);
+//    cout << "max_error: " << max_error << endl;
+//    return -max_error;
 }
 
 int main(int argc, char** argv) {
@@ -334,22 +342,22 @@ int main(int argc, char** argv) {
             //prediction is the previous value
             if (i > 0) {
                 double p = flight_data[(i * flight_columns) + j] - flight_data[((i - 1) * flight_columns) + j];
-                prev_predict += p * p;
-//                prev_predict += fabs(p);
+//                prev_predict += p * p;
+                prev_predict += fabs(p);
             }
 
             //prediction is the previous value plus the previous delta
             if (i > 1) {
                 double p = flight_data[(i * flight_columns) + j] - (flight_data[((i - 1) * flight_columns) + j] + flight_data_delta[((i - 1) * flight_columns) + j]);
-                delta_predict += p * p;
-//                delta_predict += fabs(p);
+//                delta_predict += p * p;
+                delta_predict += fabs(p);
             }
 
             //prediction is the previous value plus the previous delta plus the change in previous delta
             if (i > 2) {
                 double p = flight_data[(i * flight_columns) + j] - (flight_data[((i - 1) * flight_columns) + j] + flight_data_delta[((i - 1) * flight_columns) + j] + flight_data_delta2[((i - 1) * flight_columns) + j]);
-                delta2_predict += p * p;
-//                delta2_predict += fabs(p);
+//                delta2_predict += p * p;
+                delta2_predict += fabs(p);
             }
         }
 
@@ -358,15 +366,15 @@ int main(int argc, char** argv) {
         err_delta2 += delta2_predict / 4;
     }
 
+    /*
     err_prev   = sqrt(err_prev)   /  flight_rows;
     err_delta  = sqrt(err_delta2) / (flight_rows - 1);
     err_delta2 = sqrt(err_delta2) / (flight_rows - 2);
+    */
 
-    /*
     err_prev   = err_prev   /  flight_rows;
     err_delta  = err_delta2 / (flight_rows - 1);
     err_delta2 = err_delta2 / (flight_rows - 2);
-    */
 
     cout << "#err prev:   " << err_prev << endl;
     cout << "#err delta:  " << err_delta << endl;
