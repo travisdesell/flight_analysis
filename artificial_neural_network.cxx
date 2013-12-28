@@ -187,7 +187,6 @@ class ArtificialNeuralNetwork {
                 }
             }
 
-
             //Update the recurrent layer.
             //Need to update for mutliple hidden layers
             if (type == ELMAN_NETWORK) {
