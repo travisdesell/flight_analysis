@@ -60,3 +60,5 @@ target_link_libraries(svm undvc_common ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
 add_executable(artificial_neural_network artificial_neural_network flight_io)
 target_link_libraries(artificial_neural_network undvc_common asynchronous_algorithms synchronous_algorithms mpi_algorithms ${Boost_LIBRARIES})
 
+add_executable(artificial_neural_network_so artificial_neural_network_so flight_io)
+target_link_libraries(artificial_neural_network_so undvc_common asynchronous_algorithms synchronous_algorithms mpi_algorithms ${Boost_LIBRARIES})
