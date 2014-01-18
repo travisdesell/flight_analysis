@@ -123,7 +123,7 @@ class ArtificialNeuralNetwork {
                 //Apply weights and inputs to first hidden layer
                 for (unsigned int i = 0; i < hidden_layer_size; i++) {
                     if (use_bias) {
-                        hidden_layer[i] += weights[current_weight];
+                        hidden_layer[i] = weights[current_weight];
 //                        if (hidden_layer[i] >  1) hidden_layer[i] =  1;
 //                        if (hidden_layer[i] < -1) hidden_layer[i] = -1;
 
