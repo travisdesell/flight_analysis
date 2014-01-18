@@ -73,7 +73,7 @@ class ArtificialNeuralNetwork {
                                 use_bias(ub),
                                 type(t) {
 
-            hidden_layer = new PRECISION[hidden_layer_size * hidden_layers];
+            hidden_layer = new PRECISION[hidden_layer_size];
             output_layer = new PRECISION[output_layer_size];
 
             if (type != FEED_FORWARD_NETWORK) recurrent_layer = new PRECISION[recurrent_layer_size];
@@ -110,14 +110,11 @@ class ArtificialNeuralNetwork {
                     }
                 }
 
-            } else {    //hidden layers > 0
+            } else if (hidden_layers == 1) {    //hidden layers > 0
                 //Apply weights and inputs to first hidden layer
                 for (unsigned int i = 0; i < hidden_layer_size; i++) {
                     if (use_bias) {
-                        hidden_layer[i] += weights[current_weight];
-                        if (hidden_layer[i] >  1) hidden_layer[i] =  1;
-                        if (hidden_layer[i] < -1) hidden_layer[i] = -1;
-
+                        hidden_layer[i] = weights[current_weight];
                         current_weight++;
                     } else {
                         hidden_layer[i] = 0;
@@ -127,6 +124,9 @@ class ArtificialNeuralNetwork {
                         hidden_layer[i] += weights[current_weight] * input_layer[j];
                         current_weight++;
                     }
+
+                    if (hidden_layer[i] >  2) hidden_layer[i] =  2;
+                    if (hidden_layer[i] < -2) hidden_layer[i] = -2;
                 }
 
                 if (type != FEED_FORWARD_NETWORK) {
@@ -134,30 +134,8 @@ class ArtificialNeuralNetwork {
                     for (unsigned int i = 0; i < hidden_layer_size; i++) {
                         for (unsigned int j = 0; j < recurrent_layer_size; j++) {
                             hidden_layer[i] += weights[current_weight] * recurrent_layer[j];
-                            if (hidden_layer[i] >  1) hidden_layer[i] =  1;
-                            if (hidden_layer[i] < -1) hidden_layer[i] = -1;
-
-                            current_weight++;
-                        }
-                    }
-                }
-
-                for (unsigned int i = 1; i < hidden_layers; i++) {
-                    for (unsigned int j = 0; j < hidden_layer_size; j++) {
-                        if (use_bias) {
-                            hidden_layer[(i * hidden_layer_size) + j] = weights[current_weight];
-                            if (hidden_layer[(i * hidden_layer_size) + j] >  1) hidden_layer[i] =  1;
-                            if (hidden_layer[(i * hidden_layer_size) + j] < -1) hidden_layer[i] = -1;
-
-                            current_weight++;
-                        } else {
-                            hidden_layer[(i * hidden_layer_size) + j] = 0;
-                        }
-
-                        for (unsigned int k = 0; k < hidden_layer_size; k++) {
-                            hidden_layer[(i * hidden_layer_size) + j] += weights[current_weight] * hidden_layer[((i - 1) * hidden_layer_size) + j];
-                            if (hidden_layer[(i * hidden_layer_size) + j] >  1) hidden_layer[i] =  1;
-                            if (hidden_layer[(i * hidden_layer_size) + j] < -1) hidden_layer[i] = -1;
+                            if (hidden_layer[i] >  2) hidden_layer[i] =  2;
+                            if (hidden_layer[i] < -2) hidden_layer[i] = -2;
 
                             current_weight++;
                         }
@@ -168,37 +146,45 @@ class ArtificialNeuralNetwork {
                     output_layer[i] = 0;
 
                     for (unsigned int j = 0; j < hidden_layer_size; j++) {
-                        output_layer[i] += weights[current_weight] * hidden_layer[((hidden_layers - 1) * hidden_layer_size) + j];
-                        if (output_layer[i] >  1) output_layer[i] =  1;
-                        if (output_layer[i] < -1) output_layer[i] = -1;
+                        output_layer[i] += weights[current_weight] * hidden_layer[j];
+
+                        if (output_layer[i] >  2) output_layer[i] =  2;
+                        if (output_layer[i] < -2) output_layer[i] = -2;
 
                         current_weight++;
                     }
                 }
+            } else {
+                cout << "Error, hidden layers > 1 not implemented." << endl;
+                exit(0);
             }
 
             if (use_bias) {
                 for (unsigned int i = 0; i < output_layer_size; i++) {
                     output_layer[i] += weights[current_weight];
-                    if (output_layer[i] >  1) output_layer[i] =  1;
-                    if (output_layer[i] < -1) output_layer[i] = -1;
-
                     current_weight++;
                 }
+            }
+
+            if (current_weight != weights.size()) {
+                cout << "ERROR! current_weight != weights.size()." << endl;
+                exit(0);
             }
 
             //Update the recurrent layer.
             //Need to update for mutliple hidden layers
             if (type == ELMAN_NETWORK) {
                 for (unsigned int i = 0; i < hidden_layer_size; i++) {
-                    recurrent_layer[i] = hidden_layer[((hidden_layers - 1) * hidden_layer_size) + i];
-                    if (recurrent_layer[i] > 3) recurrent_layer[i] = 3;
+                    recurrent_layer[i] = hidden_layer[i];
+
+                    if (recurrent_layer[i] >  2) recurrent_layer[i] =  2;
                     if (recurrent_layer[i] < -2) recurrent_layer[i] = -2;
                 }
             } else if (type == JORDAN_NETWORK) {
                 for (unsigned int i = 0; i < output_layer_size; i++) {
                     recurrent_layer[i] = output_layer[i];
-                    if (recurrent_layer[i] > 3) recurrent_layer[i] = 3;
+
+                    if (recurrent_layer[i] >  2) recurrent_layer[i] =  2;
                     if (recurrent_layer[i] < -2) recurrent_layer[i] = -2;
                 }
             }
@@ -241,9 +227,10 @@ double objective_function(const vector<double> &parameters) {
     for (unsigned int i = 0; i < flight_rows - (input_timesteps + output_timesteps + seconds_into_future); i++) {
 
         for (unsigned int j = 0; j < flight_columns; j++) input_data[j] = flight_data[(i * flight_columns) + j];
-        if (input_timesteps == 2) {
+        if (input_timesteps > 0) {
             for (unsigned int j = 0; j < flight_columns; j++) input_data[j + flight_columns] = flight_data_delta[(i * flight_columns) + j];
-        } else if (input_timesteps == 3) {
+        }
+        if (input_timesteps == 1) {
             for (unsigned int j = 0; j < flight_columns; j++) input_data[j + flight_columns + flight_columns] = flight_data_delta2[(i * flight_columns) + j];
         }
 
