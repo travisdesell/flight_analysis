@@ -73,7 +73,7 @@ class ArtificialNeuralNetwork {
                                 use_bias(ub),
                                 type(t) {
 
-                                    cout << "RECURRENT_LAYER_SIZE: " << recurrent_layer_size << endl;
+            cout << "RECURRENT_LAYER_SIZE: " << recurrent_layer_size << endl;
 
             hidden_layer = new PRECISION[hidden_layer_size * hidden_layers];
             output_layer = new PRECISION[output_layer_size];
@@ -551,7 +551,7 @@ int main(int argc, char** argv) {
 
         cout << "#network type: " << network_type << endl;
 
-        cout << "#input  layer:         " << input_layer_size << " x " << flight_columns << endl;
+        cout << "#input  layer:         " << input_layer_size << endl;
         cout << "#hidden layer:         " << hidden_layers << " x " << flight_columns << endl;
         cout << "#output layer:         " << output_str << " : " << output_target << endl;
         cout << "#recurrent layer:      " << recurrent_layers << " x " << recurrent_layer_size << endl;
