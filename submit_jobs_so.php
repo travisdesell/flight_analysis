@@ -17,7 +17,7 @@ function start_de_job($flight_id, $output_target, $input_lags, $hidden_layers, $
 
 cd ~/flight_analysis/build
 
-/opt/mvapich2-x/gnu/bin/mpiexec -machinefile \$PBS_NODEFILE -np 32 ./artificial_neural_network_so --input_filename /home/travis.desell/flight_data/gecco_data/no_excedence/" . $flight_id . " --input_timesteps " . $input_lags . " --output_timesteps 1 --hidden_layers " . $hidden_layers . " --network_type " . $nn_type . " --search_type de_mpi --output_target $output_target --population_size " . $population_size . " --parent_type " . $parent_selection . " --number_pairs " . $n_pairs . " --seconds_into_future 0 --maximum_iterations 30000 $use_bias --recombination_selection $recombination --quiet";
+/opt/mvapich2-x/gnu/bin/mpiexec -machinefile \$PBS_NODEFILE -np 32 ./artificial_neural_network_so --input_filename /home/travis.desell/flight_data/gecco_data/no_excedence/" . $flight_id . " --input_lags " . $input_lags . " --output_timesteps 1 --hidden_layers " . $hidden_layers . " --network_type " . $nn_type . " --search_type de_mpi --output_target $output_target --population_size " . $population_size . " --parent_type " . $parent_selection . " --number_pairs " . $n_pairs . " --seconds_into_future 0 --maximum_iterations 30000 $use_bias --recombination_selection $recombination --quiet";
 
     echo "\tout_" . $flight_id . "_" . $output_target . "__de_" . $parent_selection . "_" . $n_pairs . "_" . $recombination . "_p" . $population_size . "__" . $nn_type . "_i" . $input_lags . "_h" . $hidden_layers . $bias_name . "__run" . $task_name . "\n";
 
@@ -41,7 +41,7 @@ function start_ps_job($flight_id, $output_target, $input_lags, $hidden_layers, $
 
 cd ~/flight_analysis/build
 
-/opt/mvapich2-x/gnu/bin/mpiexec -machinefile \$PBS_NODEFILE -np \$PBS_NP ./artificial_neural_network_so --input_filename /home/travis.desell/flight_data/gecco_data/no_excedence/" . $flight_id . " --input_timesteps " . $input_lags . " --output_timesteps 1 --hidden_layers " . $hidden_layers . " --network_type " . $nn_type . " --output_target $output_target --search_type ps_mpi --population_size " . $population_size . " --inertia_weight " . $inertia_weight . " --local_best_weight " . $local_best_weight . " --global_best_weight " . $global_best_weight . " --seconds_into_future 0 --maximum_iterations 30000 $use_bias --quiet
+/opt/mvapich2-x/gnu/bin/mpiexec -machinefile \$PBS_NODEFILE -np \$PBS_NP ./artificial_neural_network_so --input_filename /home/travis.desell/flight_data/gecco_data/no_excedence/" . $flight_id . " --input_lags " . $input_lags . " --output_timesteps 1 --hidden_layers " . $hidden_layers . " --network_type " . $nn_type . " --output_target $output_target --search_type ps_mpi --population_size " . $population_size . " --inertia_weight " . $inertia_weight . " --local_best_weight " . $local_best_weight . " --global_best_weight " . $global_best_weight . " --seconds_into_future 0 --maximum_iterations 30000 $use_bias --quiet
 ";
 
     echo "\tout_" . $flight_id . "_" . $output_target . "__ps_i" . $inertia_weight . "_l" . $local_best_weight . "_g" . $global_best_weight . "_p" . $population_size . "__" . $nn_type . "_i" . $input_lags . "_h" . $hidden_layers . $bias_name . "__run" . $task_name . "\n";
@@ -54,15 +54,15 @@ cd ~/flight_analysis/build
 
 
 
-//$flight_ids = array(13588, 15438, 17269);
-$flight_ids = array(13588);
+//$flight_ids = array(13588, 15438, 17269, 175755, 24335, 32146, 48551, 48806, 60531, 80789, 83392);
+$flight_ids = array(15438, 17269, 175755, 24335);
 $output_targets = array("airspeed", "altitude", "pitch", "roll");
 
 /** NEURAL NETWORK OPTIONS **/
 $neural_networks = array("feed_forward", "jordan", "elman");
 //$neural_networks = array("feed_forward");
 
-$input_lag_options = array(0, 1, 2);
+$input_lag_options = array(1, 2);
 $hidden_layer_options = array(0, 1);
 //$bias_options = array("", "--use_bias");
 $bias_options = array("--use_bias");
@@ -124,7 +124,7 @@ foreach ($flight_ids as $flight_id) {
                                         foreach ($local_best_weight_options as $local_best_weight) {
                                             foreach ($global_best_weight_options as $global_best_weight) {
 
-                                                for ($task_name = 1; $task_name <= 20; $task_name++) {
+                                                for ($task_name = 1; $task_name <= 10; $task_name++) {
                                                     start_ps_job($flight_id, $output_target, $input_lags, $hidden_layers, $nn_type, $population_size, $inertia_weight, $local_best_weight, $global_best_weight, $bias_name, $use_bias, $task_name);
                                                     $n_jobs++;
                                                 }

@@ -394,6 +394,7 @@ int main(int argc, char** argv) {
         avg_delta2[j] = avg_delta2[j] / (flight_rows - 2);
     }
 
+    cout << "#           " << setw(21) << "roll" << setw(21) << "pitch" << setw(21) << "airspeed" << setw(21) << "altitude" << endl;
     if (rank == 0) {
         cout << "#min:       ";
         for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << min[i];
@@ -408,11 +409,11 @@ int main(int argc, char** argv) {
         cout << endl;
 
         cout << "#max_delta: ";
-        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta2[i];
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << max_delta[i];
         cout << endl;
 
         cout << "#avg_delta: ";
-        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta2[i];
+        for (unsigned int i = 0; i < flight_columns; i++) cout << " " << setw(20) << avg_delta[i];
         cout << endl;
 
         cout << "#min_delta2:";
@@ -468,7 +469,7 @@ int main(int argc, char** argv) {
     */
 
     err_prev   = err_prev   /  flight_rows;
-    err_delta  = err_delta2 / (flight_rows - 1);
+    err_delta  = err_delta  / (flight_rows - 1);
     err_delta2 = err_delta2 / (flight_rows - 2);
 
     if (rank == 0) {
