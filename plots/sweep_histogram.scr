@@ -1,0 +1,106 @@
+#! /usr/bin/gnuplot
+
+#random noise estimation (worst case)
+#               roll                 pitch               airspeed             altitude
+#FLIGHT 17269:  0.0204441            0.0148046           0.00675531           0.00200011
+#FLIGHT 13588:  0.0158853            0.0153181           0.00512158           0.00138854
+#FLIGHT 15438:  0.00604479           0.010955            0.00316859           0.00107117
+#FLIGHT 175755: 0.012877             0.0161251           0.00508229           0.00137109
+#FLIGHT 24335:  0.0192648            0.0173269           0.00575537           0.00192345
+
+reset
+set key outside right top box opaque font "Times New Roman, 24" samplen 2 width -6
+set terminal pngcairo dashed font "Times New Roman,30" size 2000, 1000 enhanced
+set title "Multi-Output Estimation - Flight 13588"
+#set datafile missing "-"
+
+set ylabel "Best Found Fitness (% Mean Absolute Error)"
+set output '13588_sweep_fitness.png'
+
+set style data histogram
+set style histogram clustered gap 1 title offset 2,0.25
+set style fill solid 0.5 border -1
+set boxwidth 0.15
+set bars 0.4
+
+set xrange [0.75:25]
+set yrange [0.0:0.2]
+set xtics offset 1.0,0 rotate by -90 font "Times New Roman, 24"
+
+set ytics
+#set grid y
+#set auto y
+
+
+set pointsize 2
+
+plot \
+     newhistogram 'feed forward/i1/h0/b',\
+        '13588_sweep_data_feed_forward_i1_h0_b.txt' using ($1):3:xtic(2) with boxes lt -1 lc rgb '#FF00FF' title 'feed forward/i1/h0/b',\
+        '13588_sweep_data_feed_forward_i1_h0_b.txt' using ($1):4:3:5 with errorbars pt 1 ps 1 lt -1 lc rgb '#FF00FF' notitle,\
+     newhistogram 'feed forward/i2/h0/b',\
+        '13588_sweep_data_feed_forward_i2_h0_b.txt' using ($1+0.15):3 with boxes lt -1 lc rgb 'orange' title 'feed forward/i2/h0/b',\
+        '13588_sweep_data_feed_forward_i2_h0_b.txt' using ($1+0.15):4:3:5 with errorbars pt 1 ps 1 lt -1 lc rgb 'orange' notitle,\
+     newhistogram 'feed forward/i3/h0/b',\
+        '13588_sweep_data_feed_forward_i3_h0_b.txt' using ($1+0.3):3 with boxes lt -1 lc rgb '#00FFFF' title 'feed forward/i3/h0/b',\
+        '13588_sweep_data_feed_forward_i3_h0_b.txt' using ($1+0.3):4:3:5 with errorbars pt 1 ps 1 lt -1 lc rgb '#00FFFF' notitle,\
+     newhistogram 'feed forward/i1/h1/b',\
+        '13588_sweep_data_feed_forward_i1_h1_b.txt' using ($1+0.45):3 with boxes lt -1 lc rgb '#0000FF' title 'feed forward/i1/h1/b',\
+        '13588_sweep_data_feed_forward_i1_h1_b.txt' using ($1+0.45):4:3:5 with errorbars pt 1 ps 1 lt -1 lc rgb '#0000FF' notitle,\
+     newhistogram 'feed forward/i2/h1/b',\
+        '13588_sweep_data_feed_forward_i2_h1_b.txt' using ($1+0.6):3 with boxes lt -1 lc rgb '#00FF00' title 'feed forward/i2/h1/b',\
+        '13588_sweep_data_feed_forward_i2_h1_b.txt' using ($1+0.6):4:3:5 with errorbars pt 1 ps 1 lt -1 lc rgb '#00FF00' notitle,\
+     newhistogram 'feed forward/i3/h1/b',\
+        '13588_sweep_data_feed_forward_i3_h1_b.txt' using ($1+0.75):3 with boxes lt -1 lc rgb '#FF0000' title 'feed forward/i3/h1/b',\
+        '13588_sweep_data_feed_forward_i3_h1_b.txt' using ($1+0.75):4:3:5 with errorbars pt 1 ps 1 lt -1 lc rgb '#FF0000' title 'min/avg/max',\
+     0.0121193 linestyle 2 linewidth 1 linecolor rgb("#000000") title 't_i = t_{i=1} estimation'
+
+
+reset
+set key outside right top box opaque font "Times New Roman, 24" samplen 2 width -6
+set terminal pngcairo dashed font "Times New Roman,30" size 2000, 1000 enhanced
+set title "Multi-Output Estimation - Flight 13588"
+#set datafile missing "-"
+
+set ylabel "Average Evaluations Until Termination"
+set output '13588_sweep_evaluations.png'
+
+set style data histogram
+set style histogram clustered gap 1 title offset 2,0.25
+set style fill solid 0.5 border -1
+set boxwidth 0.15
+set bars 0.4
+
+set xrange [0.75:25]
+set yrange [0:50000000]
+set xtics offset 1.0,0 rotate by -90 font "Times New Roman, 24"
+
+set ytics
+set grid y
+#set auto y
+
+set format y "%.0f"
+
+set pointsize 2
+
+
+plot \
+     newhistogram 'feed forward/i1/h0/b',\
+        '13588_sweep_data_feed_forward_i1_h0_b.txt' using ($1):7:xtic(2) with boxes lt -1 lc rgb '#FF00FF' title 'feed forward/i1/h0/b',\
+        '13588_sweep_data_feed_forward_i1_h0_b.txt' using ($1):7:6:8 with errorbars lt -1 lc rgb 'black' notitle,\
+     newhistogram 'feed forward/i2/h0/b',\
+        '13588_sweep_data_feed_forward_i2_h0_b.txt' using ($1+0.15):7 with boxes lt -1 lc rgb 'orange' title 'feed forward/i2/h0/b',\
+        '13588_sweep_data_feed_forward_i2_h0_b.txt' using ($1+0.15):7:6:8 with errorbars lt -1 lc rgb 'black' notitle,\
+     newhistogram 'feed forward/i3/h0/b',\
+        '13588_sweep_data_feed_forward_i3_h0_b.txt' using ($1+0.3):7 with boxes lt -1 lc rgb '#00FFFF' title 'feed forward/i3/h0/b',\
+        '13588_sweep_data_feed_forward_i3_h0_b.txt' using ($1+0.3):7:6:8 with errorbars lt -1 lc rgb 'black' notitle,\
+     newhistogram 'feed forward/i1/h1/b',\
+        '13588_sweep_data_feed_forward_i1_h1_b.txt' using ($1+0.45):7 with boxes lt -1 lc rgb '#0000FF' title 'feed forward/i1/h1/b',\
+        '13588_sweep_data_feed_forward_i1_h1_b.txt' using ($1+0.45):7:6:8 with errorbars lt -1 lc rgb 'black' notitle,\
+     newhistogram 'feed forward/i2/h1/b',\
+        '13588_sweep_data_feed_forward_i2_h1_b.txt' using ($1+0.6):7 with boxes lt -1 lc rgb '#00FF00' title 'feed forward/i2/h1/b',\
+        '13588_sweep_data_feed_forward_i2_h1_b.txt' using ($1+0.6):7:6:8 with errorbars lt -1 lc rgb 'black' notitle,\
+     newhistogram 'feed forward/i3/h1/b',\
+        '13588_sweep_data_feed_forward_i3_h1_b.txt' using ($1+0.75):7 with boxes lt -1 lc rgb '#FF0000' title 'feed forward/i3/h1/b',\
+        '13588_sweep_data_feed_forward_i3_h1_b.txt' using ($1+0.75):7:6:8 with errorbars lt -1 lc rgb 'black' title 'min/max'
+
