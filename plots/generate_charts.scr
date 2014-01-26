@@ -1,3 +1,10 @@
 #! /bin/bash
 
-gnuplot -e "input_file='$1';altitude_output_file='altitude_$2.png';pitch_output_file='pitch_$2.png';roll_output_file='roll_$2.png';airspeed_output_file='airspeed_$2.png'" gnuplot_script.scr
+#gnuplot -e "input_file='$1';altitude_output_file='altitude_$2.png';pitch_output_file='pitch_$2.png';roll_output_file='roll_$2.png';airspeed_output_file='airspeed_$2.png'" gnuplot_script.scr
+
+gnuplot histogram_errorbars_13588.scr
+gnuplot histogram_errorbars_15438.scr
+gnuplot histogram_errorbars_17269.scr
+gnuplot histogram_errorbars_175755.scr
+gnuplot histogram_errorbars_24335.scr
+cp *.png ~/Documents/Dropbox/papers/2014_gecco/figures/

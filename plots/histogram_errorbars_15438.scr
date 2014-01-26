@@ -1,0 +1,125 @@
+#! /usr/bin/gnuplot
+
+#random noise estimation (worst case)
+#               roll                 pitch               airspeed             altitude
+#FLIGHT 17269:  0.0204441            0.0148046           0.00675531           0.00200011
+#FLIGHT 13588:  0.0158853            0.0153181           0.00512158           0.00138854
+#FLIGHT 15438:  0.00604479           0.010955            0.00316859           0.00107117
+#FLIGHT 175755: 0.012877             0.0161251           0.00508229           0.00137109
+#FLIGHT 24335:  0.0192648            0.0173269           0.00575537           0.00192345
+
+reset
+set key right top box opaque font "Times New Roman, 24" samplen 2 width -6
+set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
+set title "Airspeed Estimation - Flight 15438"
+#set datafile missing "-"
+
+set ylabel "Fitness (% Mean Absolute Error)"
+set output '15438_airspeed.png'
+
+set xrange[0.5:30.5]
+
+set style data histogram
+set style histogram errorbars linewidth 0.75
+#set style histogram cluster gap 1
+set style fill solid 0.25 border -1
+set boxwidth 0.5
+
+set yrange [0.0020:0.007]
+set xtics offset 2.5,0 rotate by -90 font "Times New Roman, 24"
+
+set pointsize 2
+
+plot '15438_airspeed.txt' using :2:2:4:4:xtic(1) with candlesticks linecolor rgb "#00FF00" title 'fitness range',\
+     '' using :3:xtic(1) with points lt -1 pt 1 title 'average',\
+     0.00316859 linestyle 2 linecolor rgb("#000000") title 't_i = t_{i=1} estimation'
+
+
+
+
+
+reset
+set key left top box opaque font "Times New Roman, 24" samplen 2 width -6
+set terminal pngcairo font "Times New Roman,30" size 2000, 600 enhanced
+set title "Altitude Estimation - Flight 15438"
+#set datafile missing "-"
+
+set ylabel "Fitness (% Mean Absolute Error)"
+set output '15438_altitude.png'
+
+set xrange[0.5:30.5]
+
+set style data histogram
+set style histogram errorbars linewidth 0.75
+#set style histogram cluster gap 1
+set style fill solid 0.25 border -1
+set boxwidth 0.5
+
+set yrange [0.0002:0.0025]
+set xtics offset 2.5,0 rotate by -90 font "Times New Roman, 24"
+
+set pointsize 2
+
+plot '15438_altitude.txt' using :2:2:4:4:xtic(1) with candlesticks linecolor rgb "#FF0000" title 'fitness range',\
+     '' using :3:xtic(1) with points lt -1 pt 1 title 'average',\
+     0.00107117 linestyle 2 linecolor rgb "#000000" title 't_i = t_{i=1} estimation'
+
+
+
+
+reset
+set key left top box opaque font "Times New Roman, 24" samplen 2 width -6
+set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
+set title "Pitch Estimation - Flight 15438"
+#set datafile missing "-"
+
+set ylabel "Fitness (% Mean Absolute Error)"
+set output '15438_pitch.png'
+
+set xrange[0.5:30.5]
+
+set style data histogram
+set style histogram errorbars linewidth 0.75
+#set style histogram cluster gap 1
+set style fill solid 0.25 border -1
+set boxwidth 0.5
+
+set yrange [0.008:0.015]
+set xtics offset 2.5,0 rotate by -90 font "Times New Roman, 24"
+
+set pointsize 2
+
+plot '15438_pitch.txt' using :2:2:4:4:xtic(1) with candlesticks linecolor rgb "#0000FF" title 'fitness range',\
+     '' using :3:xtic(1) with points lt -1 pt 1 title 'average',\
+     0.010955 linestyle 2 linecolor rgb "#000000" title 't_i = t_{i=1} estimation'
+
+
+
+
+
+reset
+set key right top box opaque font "Times New Roman, 24" samplen 2 width -6
+set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
+set title "Roll Estimation - Flight 15438"
+#set datafile missing "-"
+
+set ylabel "Fitness (% Mean Absolute Error)"
+set output '15438_roll.png'
+
+set xrange[0.5:30.5]
+
+set style data histogram
+set style histogram errorbars linewidth 0.75
+#set style histogram cluster gap 1
+set style fill solid 0.25 border -1
+set boxwidth 0.5
+
+set yrange [0.005:0.009]
+set xtics offset 2.5,0 rotate by -90 font "Times New Roman, 24"
+
+set pointsize 2
+
+plot '15438_roll.txt' using :2:2:4:4:xtic(1) with candlesticks linecolor rgb "#FFFF00" title 'fitness range',\
+     '' using :3:xtic(1) with points lt -1 pt 1 title 'average',\
+     0.00604479 linestyle 2 linecolor rgb "#000000" title 't_i = t_{i=1} estimation'
+
