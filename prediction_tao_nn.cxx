@@ -102,6 +102,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < time_series_rows; i++) {
         for (int j = 0; j < time_series_columns; j++) {
 
+            /*
             if (0 == column_headers[j].compare("roll_attitude")) {
                 time_series_data[i][j] = time_series_data[i][j] / 60;
 
@@ -115,8 +116,9 @@ int main(int argc, char** argv) {
                 time_series_data[i][j] = time_series_data[i][j] / 6000;
 
             } else {
+            */
                 time_series_data[i][j] = (time_series_data[i][j] - mins[j]) / (maxs[j] - mins[j]);
-            }
+            //}
         }
     }
 
