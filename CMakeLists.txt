@@ -99,6 +99,9 @@ target_link_libraries(process_flights ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES}
 add_executable(svm svm)
 target_link_libraries(svm ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
 
+add_executable(prediction_tao_nn prediction_tao_nn flight_io)
+target_link_libraries(prediction_tao_nn ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
+
 add_executable(artificial_neural_network artificial_neural_network flight_io)
 target_link_libraries(artificial_neural_network ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
 
