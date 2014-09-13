@@ -39,15 +39,11 @@ using boost::filesystem::directory_iterator;
 using boost::tokenizer;
 using boost::char_separator;
 
-/**
- *  For MYSQL
- */
+//For MYSQL
 #include "mysql.h"
 
-/**
- *  For argument parsing and other helpful functions
- */
-#include "tao/undvc_common/arguments.hxx"
+//For argument parsing and other helpful functions
+#include "arguments.hxx"
 
 template <typename T>
 string to_string(T value) {

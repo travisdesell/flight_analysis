@@ -14,7 +14,7 @@ set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
 set title "Airspeed Estimation - Flight 24335"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '24335_airspeed.png'
 
 set xrange[0.5:30.5]
@@ -44,7 +44,7 @@ set terminal pngcairo font "Times New Roman,30" size 2000, 600 enhanced
 set title "Altitude Estimation - Flight 24335"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '24335_altitude.png'
 
 set xrange[0.5:30.5]
@@ -73,7 +73,7 @@ set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
 set title "Pitch Estimation - Flight 24335"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '24335_pitch.png'
 
 set xrange[0.5:30.5]
@@ -103,7 +103,7 @@ set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
 set title "Roll Estimation - Flight 24335"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '24335_roll.png'
 
 set xrange[0.5:30.5]

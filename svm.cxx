@@ -31,10 +31,8 @@ using boost::uniform_real;
 using boost::tokenizer;
 using boost::char_separator;
 
-/**
- *  For argument parsing and other helpful functions
- */
-#include "tao/undvc_common/arguments.hxx"
+//For argument parsing and other helpful functions, from undvc_common
+#include "arguments.hxx"
 
 
 /****

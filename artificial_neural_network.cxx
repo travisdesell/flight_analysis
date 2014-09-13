@@ -18,18 +18,19 @@ using std::setw;
 
 #include "flight_io.hxx"
 
+//from TAO
 #include "mpi/mpi_particle_swarm.hxx"
 #include "mpi/mpi_differential_evolution.hxx"
 
 #include "asynchronous_algorithms/particle_swarm.hxx"
 #include "asynchronous_algorithms/differential_evolution.hxx"
 
-#include "tao/synchronous_algorithms/synchronous_newton_method.hxx"
-#include "tao/synchronous_algorithms/synchronous_gradient_descent.hxx"
+#include "synchronous_algorithms/synchronous_newton_method.hxx"
+#include "synchronous_algorithms/synchronous_gradient_descent.hxx"
 
 
 //from undvc_common
-#include "undvc_common/arguments.hxx"
+#include "arguments.hxx"
 
 #define PRECISION double
 

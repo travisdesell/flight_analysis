@@ -18,18 +18,19 @@ using std::setw;
 
 #include "flight_io.hxx"
 
+//from TAO
 #include "mpi/mpi_particle_swarm.hxx"
 #include "mpi/mpi_differential_evolution.hxx"
 
 #include "asynchronous_algorithms/particle_swarm.hxx"
 #include "asynchronous_algorithms/differential_evolution.hxx"
 
-#include "tao/synchronous_algorithms/synchronous_newton_method.hxx"
-#include "tao/synchronous_algorithms/synchronous_gradient_descent.hxx"
+#include "synchronous_algorithms/synchronous_newton_method.hxx"
+#include "synchronous_algorithms/synchronous_gradient_descent.hxx"
 
 
 //from undvc_common
-#include "undvc_common/arguments.hxx"
+#include "arguments.hxx"
 
 #define PRECISION double
 
@@ -558,7 +559,12 @@ int main(int argc, char** argv) {
         cout << "#recurrent layer:      " << recurrent_layers << " x " << recurrent_layer_size << endl;
     }
 
-    srand48(time(NULL));
+    long seed;
+    if (get_argument(arguments, "--seed", false, seed)) {
+        srand48(seed);
+    } else {
+        srand48(time(NULL));
+    }
 
     bool use_bias = false;
     use_bias = argument_exists(arguments, "--use_bias");
@@ -577,20 +583,28 @@ int main(int argc, char** argv) {
         }
         */
 
-        double total_error = 0;
-        double current_error;
+    
+        ann->reset();
+        double total_error = 0.0, current_error = 0.0;
+
         for (unsigned int i = 0; i < flight_rows - (input_lags + 1 + output_timesteps + seconds_into_future); i++) {
-            current_error = ann->evaluate( ann_parameters_v, &(flight_data[i * flight_columns]), &(flight_data[((i + input_lags + 1 + seconds_into_future) * flight_columns) + output_target]) );
 
-            cout << setw(5) << i;
-            for (unsigned int j = 0; j < flight_columns; j++) {
-                cout << setw(20) << ann->get_output_layer(j) << setw(20) << flight_data[((i + input_lags + 1 + seconds_into_future) * flight_columns) + j];
+            for (unsigned int j = 0; j < flight_columns; j++) input_data[j] = flight_data[(i * flight_columns) + j];
+            if (input_lags > 0) {
+                for (unsigned int j = 0; j < flight_columns; j++) input_data[j + flight_columns] = flight_data_delta[(i * flight_columns) + j];
             }
-            cout << endl;
+            
+            if (input_lags > 1) {
+                for (unsigned int j = 0; j < flight_columns; j++) input_data[j + flight_columns + flight_columns] = flight_data_delta2[(i * flight_columns) + j];
+            }
 
-            total_error += current_error;
+            current_error = ann->evaluate( ann_parameters_v, input_data, &(flight_data[((i + 1 + seconds_into_future) * flight_columns) + output_target]) );
+
+            total_error += (current_error / flight_rows);
         }
-        cerr << "total error: " << (sqrt(total_error) / flight_rows) << endl;
+        total_error *= -1.0;
+
+        cout << "total error: " << total_error << endl;
 
     } else {
         int number_of_nodes = 0;
@@ -661,8 +675,6 @@ int main(int argc, char** argv) {
             de.go(objective_function);
 
         } else if (search_type.compare("snm") == 0 || search_type.compare("gd") == 0 || search_type.compare("cgd") == 0) {
-            srand48(time(NULL));
-
             string starting_point_s;
             vector<double> starting_point(min_bound.size(), 0);
 

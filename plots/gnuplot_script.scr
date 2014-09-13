@@ -1,58 +1,62 @@
 #! /usr/bin/gnuplot
 
 reset
-set terminal png size 4000, 1500 crop
-set title "Flight MSL Altitude Estimation"
+set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
+set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set title "MSL Altitude Estimation"
 set datafile missing "-"
 
 set style data lines
 set key right box
-set ylabel "value"
-set xlabel "timestep"
+set ylabel "Normalized MSL Altitude"
+set xlabel "Timestep"
 set output altitude_output_file
 
-plot input_file every 1 u 8 ti 'Expected MSL Altitude', \
+plot input_file every 1 u 8 ti 'Predicted MSL Altitude', \
      input_file every 1 u 9 ti 'Actual MSL Altitude'
 
 reset
-set terminal png size 4000, 1500 crop
-set title "Flight Roll Estimation"
+set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
+set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set title "Roll Estimation"
 set datafile missing "-"
 
 set style data lines
 set key right box
-set ylabel "value"
-set xlabel "timestep"
+set ylabel "Normalized Roll"
+set xlabel "Timestep"
 set output roll_output_file
 
-plot input_file every 1 u 2 ti 'Expected Roll Attitude', \
+plot input_file every 1 u 2 ti 'Predicted Roll Attitude', \
      input_file every 1 u 3 ti 'Actual Roll Attitude'
 
 reset
-set terminal png size 4000, 1500 crop
-set title "Flight Estimation"
+set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
+set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set title "Pitch Estimation"
 set datafile missing "-"
 
 set style data lines
 set key right box
-set ylabel "value"
-set xlabel "timestep"
+set ylabel "Normalized Pitch"
+set xlabel "Timestep"
 set output pitch_output_file
 
-plot input_file every 1 u 4 ti 'Expected Pitch Attitude', \
+plot input_file every 1 u 4 ti 'Predicted Pitch Attitude', \
      input_file every 1 u 5 ti 'Actual Pitch Altitude'
 
 reset
-set terminal png size 4000, 1500 crop
-set title "Flight Estimation"
+set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
+set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set title "Airspeed Estimation"
 set datafile missing "-"
 
 set style data lines
 set key right box
-set ylabel "value"
-set xlabel "timestep"
+set ylabel "Normalized Airspeed"
+set xlabel "Timestep"
 set output airspeed_output_file
 
-plot input_file every 1 u 6 ti 'Expected Airspeed', \
+plot input_file every 1 u 6 ti 'Predicted Airspeed', \
      input_file every 1 u 7 ti 'Actual Airspeed'
 

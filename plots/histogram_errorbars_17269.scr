@@ -14,7 +14,7 @@ set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
 set title "Airspeed Estimation - Flight 17269"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '17269_airspeed.png'
 
 set style data histogram
@@ -43,7 +43,7 @@ set terminal pngcairo font "Times New Roman,30" size 2000, 600 enhanced
 set title "Altitude Estimation - Flight 17269"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '17269_altitude.png'
 
 set style data histogram
@@ -71,7 +71,7 @@ set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
 set title "Pitch Estimation - Flight 17269"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '17269_pitch.png'
 
 set style data histogram
@@ -100,7 +100,7 @@ set terminal pngcairo dashed font "Times New Roman,30" size 2000, 600 enhanced
 set title "Roll Estimation - Flight 17269"
 #set datafile missing "-"
 
-set ylabel "Fitness (% Mean Absolute Error)"
+set ylabel "Fitness (Mean Absolute Error)"
 set output '17269_roll.png'
 
 set style data histogram

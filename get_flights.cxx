@@ -24,15 +24,11 @@ using std::vector;
 
 #include <limits>
 
-/**
- *  For MYSQL
- */
+//For MYSQL
 #include "mysql.h"
 
-/**
- *  For argument parsing and other helpful functions
- */
-#include "tao/undvc_common/arguments.hxx"
+//For argument parsing and other helpful functions, from undvc_common
+#include "arguments.hxx"
 
 #define mysql_query_check(conn, query) __mysql_check (conn, query, __FILE__, __LINE__)
 
@@ -169,7 +165,8 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
         for (uint32_t j = 0; j < flight_row->size(); j++) {
             //normalize the flight data between 0 and 1
 //            (*file) << " " << ((atof(flight_row->at(j).c_str()) - min[j]) / (max[j] - min[j]));
-            (*file) << " " << atof(flight_row->at(j).c_str());
+//            (*file) << " " << atof(flight_row->at(j).c_str());
+            (*file) << " " << flight_row->at(j);
         }
         (*file) << endl;
     }
@@ -293,7 +290,8 @@ int main(int argc /* number of command line arguments */, char **argv /* command
 
 //        flight_data_query << "SELECT roll_attitude, pitch_attitude, indicated_airspeed, eng_1_cht_1, eng_1_cht_2, eng_1_cht_3, eng_1_cht_4, msl_altitude, fuel_quantity_left_main, fuel_quantity_right_main, eng_1_oil_press FROM main WHERE flight = '" << flight_id << "'" << endl;
 
-        flight_data_query << "SELECT time, roll_attitude, pitch_attitude, indicated_airspeed, msl_altitude FROM main WHERE flight = '" << flight_id << "'" << endl;
+//        flight_data_query << "SELECT time, roll_attitude, pitch_attitude, indicated_airspeed, msl_altitude FROM main WHERE flight = '" << flight_id << "'" << endl;
+        flight_data_query << "SELECT time, roll_attitude, pitch_attitude, indicated_airspeed, msl_altitude, latitude, longitude, course FROM main WHERE flight = '" << flight_id << "'" << endl;
 
         mysql_query_check(conn, flight_data_query.str());
         MYSQL_RES *flight_data_result = mysql_store_result(conn);

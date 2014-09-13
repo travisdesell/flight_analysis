@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 2.6)
 project (FDM)
 
+SET (PLATFORM 64)
+
 # The version number.
 set (FDM_VERSION_MAJOR 1)
 set (FDM_VERSION_MINOR 0)
@@ -12,7 +14,51 @@ SET (CMAKE_CXX_FLAGS_RELEASE        "-O4 -funrol-loops -DNDEBUG")
 
 set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tao/undvc_common/cmake/Modules/")
+include_directories(${PROJECT_SOURCE_DIR})
+#message("project source dir = ${PROJECT_SOURCE_DIR}")
+
+#This will look for the undvc_common library, which should be in the
+#same directory as this project. It should be compiled in the ../undvc_common/build
+#directory
+FIND_PATH(UNDVC_COMMON_INCLUDE_DIR file_io.hxx
+    ../undvc_common         #add addiitonal paths here if undvc_common is in a different directory
+    )
+MESSAGE(STATUS "UNDVC_COMMON include directory: ${UNDVC_COMMON_INCLUDE_DIR}")
+
+FIND_LIBRARY(UNDVC_COMMON_LIBRARY
+    NAMES undvc_common
+    PATHS ../undvc_common/build         #add additional paths here if undvc_common is in a different directory
+                                        #or if it has been build in a different directory
+    PATH_SUFFIXES lib
+    )
+MESSAGE(STATUS "UNDVC_COMMON library: ${UNDVC_COMMON_LIBRARY}")
+
+include_directories(${UNDVC_COMMON_INCLUDE_DIR})
+
+
+#This will look for the tao library, which should be in the
+#same directory as this project. It should be compiled in the ../tao/build
+#directory
+FIND_PATH(TAO_INCLUDE_DIR ./examples/benchmarks.hxx
+    ../tao #add addiitonal paths here if undvc_common is in a different directory
+    )
+MESSAGE(STATUS "TAO include directory: ${TAO_INCLUDE_DIR}")
+
+FIND_LIBRARY(TAO_MPI_LIBRARY NAMES mpi_algorithms PATHS ../tao/build/mpi PATH_SUFFIXES lib)
+FIND_LIBRARY(TAO_SYNCH_LIBRARY NAMES synchronous_algorithms PATHS ../tao/build/synchronous_algorithms PATH_SUFFIXES lib)
+FIND_LIBRARY(TAO_ASYNCH_LIBRARY NAMES asynchronous_algorithms PATHS ../tao/build/asynchronous_algorithms PATH_SUFFIXES lib)
+FIND_LIBRARY(TAO_DB_ASYNCH_LIBRARY NAMES db_asynchronous_algorithms PATHS ../tao/build/asynchronous_algorithms PATH_SUFFIXES lib)
+FIND_LIBRARY(TAO_NN_LIBRARY NAMES neural_networks PATHS ../tao/build/neural_networks PATH_SUFFIXES lib)
+FIND_LIBRARY(TAO_UTIL_LIBRARY NAMES tao_util PATHS ../tao/build/util  PATH_SUFFIXES lib)
+
+set(TAO_LIBRARY ${TAO_MPI_LIBRARY} ${TAO_SYNCH_LIBRARY} ${TAO_ASYNCH_LIBRARY} ${TAO_DB_ASYNCH_LIBRARY} ${TAO_NN_LIBRARY} ${TAO_UTIL_LIBRARY})
+MESSAGE(STATUS "TAO library: ${TAO_LIBRARY}")
+
+include_directories(${TAO_INCLUDE_DIR})
+
+
+#UNDVC_COMMON has the FindBOINC.cmake and FindMYSQL.cmake files
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${UNDVC_COMMON_INCLUDE_DIR}/cmake/Modules/")
 
 set(BOOST_LIB_PREFIX "lib")
 set(Boost_LIB_PREFIX "lib")
@@ -37,28 +83,28 @@ find_package(Boost REQUIRED system filesystem)
 find_package(MySQL)
 find_package(MPI)
 
-add_subdirectory(tao)
-
 message(STATUS " mysql include dir: ${MYSQL_INCLUDE_DIR}")
 
-include_directories(tao)
-include_directories(undvc_common)
 include_directories(${MYSQL_INCLUDE_DIR})
 include_directories(${MYSQL_INCLUDE_DIR}/mysql)
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${MPI_INCLUDE_PATH})
 
 add_executable(get_flights get_flights)
-target_link_libraries(get_flights undvc_common ${MYSQL_LIBRARIES})
+target_link_libraries(get_flights ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES})
 
 add_executable(process_flights process_flights)
-target_link_libraries(process_flights undvc_common ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(process_flights ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(svm svm)
-target_link_libraries(svm undvc_common ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(svm ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(artificial_neural_network artificial_neural_network flight_io)
-target_link_libraries(artificial_neural_network undvc_common asynchronous_algorithms synchronous_algorithms mpi_algorithms ${Boost_LIBRARIES})
+target_link_libraries(artificial_neural_network ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
 
 add_executable(artificial_neural_network_so artificial_neural_network_so flight_io)
-target_link_libraries(artificial_neural_network_so undvc_common asynchronous_algorithms synchronous_algorithms mpi_algorithms ${Boost_LIBRARIES})
+target_link_libraries(artificial_neural_network_so ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
+
+add_executable(artificial_neural_network_arima artificial_neural_network_arima flight_io)
+target_link_libraries(artificial_neural_network_arima ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
+
