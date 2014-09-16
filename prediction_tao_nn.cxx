@@ -28,6 +28,7 @@ using std::setw;
 #include "mpi/mpi_particle_swarm.hxx"
 #include "mpi/mpi_differential_evolution.hxx"
 
+#include "asynchronous_algorithms/ant_colony_optimization.hxx"
 #include "asynchronous_algorithms/particle_swarm.hxx"
 #include "asynchronous_algorithms/differential_evolution.hxx"
 
@@ -45,6 +46,24 @@ double objective_function(const vector<double> &parameters) {
     return ts_nn->objective_function(parameters);
 }
 
+vector<string> arguments;
+
+double aco_objective_function(const vector<Edge> &edges, const vector<Edge> &recurrent_edges) {
+    ts_nn->set_edges(edges, recurrent_edges);
+
+    vector<double> min_bound(ts_nn->get_n_edges(), -1.5);
+    vector<double> max_bound(ts_nn->get_n_edges(),  1.5);
+
+    ParticleSwarm ps(min_bound, max_bound, arguments);
+
+    ps.iterate(objective_function);
+
+    //run EA
+
+    return ps.get_global_best_fitness();
+}
+
+
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
@@ -52,7 +71,7 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &max_rank);
 
-    vector<string> arguments(argv, argv + argc);
+    arguments = vector<string>(argv, argv + argc);
 
     string input_filename;
     get_argument(arguments, "--input_filename", true, input_filename);
@@ -102,7 +121,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < time_series_rows; i++) {
         for (int j = 0; j < time_series_columns; j++) {
 
-            /*
             if (0 == column_headers[j].compare("roll_attitude")) {
                 time_series_data[i][j] = time_series_data[i][j] / 60;
 
@@ -116,9 +134,8 @@ int main(int argc, char** argv) {
                 time_series_data[i][j] = time_series_data[i][j] / 6000;
 
             } else {
-            */
                 time_series_data[i][j] = (time_series_data[i][j] - mins[j]) / (maxs[j] - mins[j]);
-            //}
+            }
         }
     }
 
@@ -164,6 +181,24 @@ int main(int argc, char** argv) {
         ts_nn->reset();
         ts_nn->read_weights_from_file(weights_filename);
         cout << "total error: " << ts_nn->evaluate() << endl;
+
+    } else if (argument_exists(arguments, "--aco_iterations")) {
+        //get number ants
+        //know input layer size already
+        //get hidden layer size
+        //get hidden layer nodes
+        int aco_iterations, n_ants, max_edge_pop_size, n_hidden_layers, nodes_per_layer;
+        get_argument(arguments, "--aco_iterations", true, aco_iterations);
+        get_argument(arguments, "--n_ants", true, n_ants);
+        get_argument(arguments, "--max_edge_pop_size", true, max_edge_pop_size);
+        get_argument(arguments, "--n_hidden_layers", true, n_hidden_layers);
+        get_argument(arguments, "--nodes_per_layer", true, nodes_per_layer);
+
+        ts_nn->initialize_nodes(n_hidden_layers, nodes_per_layer);
+
+        AntColony ant_colony(n_ants, max_edge_pop_size, time_series_columns, nodes_per_layer, n_hidden_layers);
+
+        ant_colony_optimization(aco_iterations, ant_colony, aco_objective_function);
 
     } else {
         vector<double> min_bound(ts_nn->get_n_edges(), -1.5);
