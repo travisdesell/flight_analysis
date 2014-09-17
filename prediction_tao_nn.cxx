@@ -25,6 +25,7 @@ using std::setw;
 #include "neural_networks/edge.hxx"
 #include "neural_networks/time_series_neural_network.hxx"
 
+#include "mpi/mpi_ant_colony_optimization.hxx"
 #include "mpi/mpi_particle_swarm.hxx"
 #include "mpi/mpi_differential_evolution.hxx"
 
@@ -49,6 +50,20 @@ double objective_function(const vector<double> &parameters) {
 vector<string> arguments;
 
 double aco_objective_function(const vector<Edge> &edges, const vector<Edge> &recurrent_edges) {
+    /*
+    cout << "#feed forward edges" << endl;
+    for (int j = 0; j < edges.size(); j++) {
+        cout << edges[j] << endl;
+    }
+    cout << endl;
+
+    cout << "#recurrent edges" << endl;
+    for (int j = 0; j < recurrent_edges.size(); j++) {
+        cout << recurrent_edges[j] << endl;
+    }
+    cout << endl;
+    */
+
     ts_nn->set_edges(edges, recurrent_edges);
 
     vector<double> min_bound(ts_nn->get_n_edges(), -1.5);
@@ -168,16 +183,17 @@ int main(int argc, char** argv) {
         srand48(time(NULL));
     }
 
-    string nn_filename;
-    get_argument(arguments, "--nn", true, nn_filename);
 
     ts_nn = new TimeSeriesNeuralNetwork(output_target);
     ts_nn->set_time_series_data(time_series_data, time_series_rows, time_series_columns);
-    ts_nn->read_nn_from_file(nn_filename);
 
     string weights_filename;
     if (get_argument(arguments, "--weights", false, weights_filename)) {
         //read the nn edges and weights from a file, then run it once
+        string nn_filename;
+        get_argument(arguments, "--nn", true, nn_filename);
+        ts_nn->read_nn_from_file(nn_filename);
+
         ts_nn->reset();
         ts_nn->read_weights_from_file(weights_filename);
         cout << "total error: " << ts_nn->evaluate() << endl;
@@ -198,9 +214,15 @@ int main(int argc, char** argv) {
 
         AntColony ant_colony(n_ants, max_edge_pop_size, time_series_columns, nodes_per_layer, n_hidden_layers);
 
-        ant_colony_optimization(aco_iterations, ant_colony, aco_objective_function);
+        ant_colony_optimization_mpi(aco_iterations, ant_colony, aco_objective_function);
 
     } else {
+        //read the nn edges from a file
+        string nn_filename;
+        get_argument(arguments, "--nn", true, nn_filename);
+        ts_nn->read_nn_from_file(nn_filename);
+        ts_nn->reset();
+
         vector<double> min_bound(ts_nn->get_n_edges(), -1.5);
         vector<double> max_bound(ts_nn->get_n_edges(),  1.5);
 
