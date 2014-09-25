@@ -93,6 +93,9 @@ include_directories(${MPI_INCLUDE_PATH})
 add_executable(get_flights get_flights)
 target_link_libraries(get_flights ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES})
 
+add_executable(get_randomized_flights get_randomized_flights)
+target_link_libraries(get_randomized_flights ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES})
+
 add_executable(process_flights process_flights)
 target_link_libraries(process_flights ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES} ${Boost_LIBRARIES})
 

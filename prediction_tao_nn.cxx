@@ -30,6 +30,7 @@ using std::setw;
 #include "mpi/mpi_differential_evolution.hxx"
 
 #include "asynchronous_algorithms/ant_colony_optimization.hxx"
+#include "asynchronous_algorithms/neat.hxx"
 #include "asynchronous_algorithms/particle_swarm.hxx"
 #include "asynchronous_algorithms/differential_evolution.hxx"
 
@@ -77,6 +78,31 @@ double aco_objective_function(const vector<Edge> &edges, const vector<Edge> &rec
 
     return ps.get_global_best_fitness();
 }
+
+double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const vector<Edge> &edges, const vector<Edge> &recurrent_edges) {
+    /*
+    cout << "#feed forward edges" << endl;
+    for (int j = 0; j < edges.size(); j++) {
+        cout << edges[j] << endl;
+    }
+    cout << endl;
+
+    cout << "#recurrent edges" << endl;
+    for (int j = 0; j < recurrent_edges.size(); j++) {
+        cout << recurrent_edges[j] << endl;
+    }
+    cout << endl;
+
+    cout << "n_hidden_layers: " << n_hidden_layers << ", nodes_per_layer: " << nodes_per_layer << endl;
+    */
+
+    ts_nn->initialize_nodes(n_hidden_layers, nodes_per_layer);
+    ts_nn->set_edges(edges, recurrent_edges);
+
+    double fitness = ts_nn->objective_function();
+    return fitness;
+}
+
 
 
 int main(int argc, char** argv) {
@@ -197,6 +223,42 @@ int main(int argc, char** argv) {
         ts_nn->reset();
         ts_nn->read_weights_from_file(weights_filename);
         cout << "total error: " << ts_nn->evaluate() << endl;
+    } else if (argument_exists(arguments, "--neat_iterations")) {
+
+        int neat_iterations;
+        get_argument(arguments, "--neat_iterations", true, neat_iterations);
+
+        //NEAT parameters
+        double excess_weight = 1.0;
+        double disjoint_weight = 1.0;
+        double weight_weight = 1.0;
+        double compatibility_threshold = 2.5;
+        double normalization = 1.0;
+
+        double mutation_without_crossover_rate = 0.25; 
+        double add_node_mutation_rate = 0.01; 
+        double add_link_mutation_rate = 0.1; 
+        double interspecies_crossover_rate = 0.05;
+
+        double weight_mutation_rate = 0.8; 
+        double random_weight_mutation_rate = 0.1;
+        double uniform_weight_mutation_rate = 0.9;
+        double uniform_perturbation = 0.001;
+
+        //NEED:
+        double enable_if_both_parents_disabled = 0.25;
+
+        int population_size = 100;
+
+        NEAT neat(excess_weight, disjoint_weight, weight_weight, compatibility_threshold, normalization,
+                  mutation_without_crossover_rate, weight_mutation_rate, add_node_mutation_rate,
+                  add_link_mutation_rate, interspecies_crossover_rate, random_weight_mutation_rate,
+                  uniform_weight_mutation_rate, uniform_perturbation, enable_if_both_parents_disabled, population_size);
+
+        int n_input_nodes = time_series_columns;
+        int n_output_nodes = 1;
+        neat.iterate(neat_iterations, n_input_nodes, n_output_nodes, neat_objective_function);
+
 
     } else if (argument_exists(arguments, "--aco_iterations")) {
         //get number ants
