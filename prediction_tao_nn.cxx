@@ -76,15 +76,11 @@ double aco_objective_function(vector<Edge> &edges, vector<Edge> &recurrent_edges
     ps.iterate(objective_function);
 
     //set the weights using the best found individual  
+    //dont need to set recurrent edges because they're weights are always 1
     vector<double> global_best = ps.get_global_best();
     int current = 0;
     for (int i = 0; i < edges.size(); i++) {
         edges[i].weight = global_best[current];
-        current++;
-    }
-
-    for (int i = 0; i < recurrent_edges.size(); i++) {
-        recurrent_edges[i].weight = global_best[current];
         current++;
     }
 
@@ -133,12 +129,10 @@ double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const v
 
     //double fitness = ts_nn->objective_function();
 
+    //don't need to do recurrent edges as they always have a weight of 1
     vector<double> starting_point;
     for (int i = 0; i < edges.size(); i++) {
         starting_point.push_back(edges[i].weight);
-    }
-    for (int i = 0; i < recurrent_edges.size(); i++) {
-        starting_point.push_back(recurrent_edges[i].weight);
     }
     vector<double> step_size( starting_point.size(), 0.0001 );
 
@@ -147,7 +141,7 @@ double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const v
     vector<double> final_parameters;
     synchronous_gradient_descent(arguments, objective_function, starting_point, step_size, final_parameters, fitness);
 
-    cout << "n_hidden_layers: " << n_hidden_layers << ", nodes per layer: " << nodes_per_layer << ", starting_point.size(): " << starting_point.size() << ", step_size.size(): " << step_size.size() << ", fitness: " << fitness << endl;
+//    cout << "n_hidden_layers: " << n_hidden_layers << ", nodes per layer: " << nodes_per_layer << ", starting_point.size(): " << starting_point.size() << ", step_size.size(): " << step_size.size() << ", fitness: " << fitness << endl;
 
     return fitness;
 }
