@@ -105,12 +105,12 @@ target_link_libraries(svm ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES} ${Boost_LIB
 add_executable(prediction_tao_nn prediction_tao_nn flight_io)
 target_link_libraries(prediction_tao_nn ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
 
-add_executable(artificial_neural_network artificial_neural_network flight_io)
-target_link_libraries(artificial_neural_network ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
+#add_executable(artificial_neural_network artificial_neural_network flight_io)
+#target_link_libraries(artificial_neural_network ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
 
-add_executable(artificial_neural_network_so artificial_neural_network_so flight_io)
-target_link_libraries(artificial_neural_network_so ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
+#add_executable(artificial_neural_network_so artificial_neural_network_so flight_io)
+#target_link_libraries(artificial_neural_network_so ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
 
-add_executable(artificial_neural_network_arima artificial_neural_network_arima flight_io)
-target_link_libraries(artificial_neural_network_arima ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
+#add_executable(artificial_neural_network_arima artificial_neural_network_arima flight_io)
+#target_link_libraries(artificial_neural_network_arima ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
 

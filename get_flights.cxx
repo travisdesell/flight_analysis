@@ -286,12 +286,12 @@ int main(int argc /* number of command line arguments */, char **argv /* command
 
         ostringstream flight_data_query;
 //        flight_data_query << "SELECT * FROM main WHERE flight ='" << flight_id << "'";
-//        flight_data_query << "SELECT id, flight, phase, time, msl_altitude, indicated_airspeed, vertical_airspeed, tas, heading, course, pitch_attitude, roll_attitude, eng_1_rpm, vertical_acceleration, longitudinal_acceleration, lateral_acceleration, oat, groundspeed, latitude, longitude, nav_1_freq, nav_2_freq, obs_1, fuel_quantity_left_main, fuel_quantity_right_main, eng_1_fuel_flow, eng_1_oil_press, eng_1_oil_temp, eng_1_cht_1, eng_1_cht_2, eng_1_cht_3, eng_1_cht_4, eng_1_egt_1, eng_1_egt_2, eng_1_egt_3, eng_1_egt_4, system_1_volts, system_2_volts, system_1_amps, system_2_amps FROM main WHERE flight ='" << flight_id << "'";
+        flight_data_query << "SELECT id, flight, phase, time, msl_altitude, indicated_airspeed, vertical_airspeed, tas, heading, course, pitch_attitude, roll_attitude, eng_1_rpm, vertical_acceleration, longitudinal_acceleration, lateral_acceleration, oat, groundspeed, latitude, longitude, nav_1_freq, nav_2_freq, obs_1, fuel_quantity_left_main, fuel_quantity_right_main, eng_1_fuel_flow, eng_1_oil_press, eng_1_oil_temp, eng_1_cht_1, eng_1_cht_2, eng_1_cht_3, eng_1_cht_4, eng_1_egt_1, eng_1_egt_2, eng_1_egt_3, eng_1_egt_4, system_1_volts, system_2_volts, system_1_amps, system_2_amps FROM main WHERE flight ='" << flight_id << "'";
 
 //        flight_data_query << "SELECT roll_attitude, pitch_attitude, indicated_airspeed, eng_1_cht_1, eng_1_cht_2, eng_1_cht_3, eng_1_cht_4, msl_altitude, fuel_quantity_left_main, fuel_quantity_right_main, eng_1_oil_press FROM main WHERE flight = '" << flight_id << "'" << endl;
 
 //        flight_data_query << "SELECT time, roll_attitude, pitch_attitude, indicated_airspeed, msl_altitude FROM main WHERE flight = '" << flight_id << "'" << endl;
-        flight_data_query << "SELECT time, roll_attitude, pitch_attitude, indicated_airspeed, msl_altitude, latitude, longitude, course FROM main WHERE flight = '" << flight_id << "'" << endl;
+//        flight_data_query << "SELECT time, roll_attitude, pitch_attitude, indicated_airspeed, msl_altitude, latitude, longitude, course FROM main WHERE flight = '" << flight_id << "'" << endl;
 
         mysql_query_check(conn, flight_data_query.str());
         MYSQL_RES *flight_data_result = mysql_store_result(conn);

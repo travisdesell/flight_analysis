@@ -50,7 +50,7 @@ double objective_function(const vector<double> &parameters) {
 
 vector<string> arguments;
 
-double aco_objective_function(const vector<Edge> &edges, const vector<Edge> &recurrent_edges) {
+double aco_objective_function(vector<Edge> &edges, vector<Edge> &recurrent_edges) {
     /*
     cout << "#feed forward edges" << endl;
     for (int j = 0; j < edges.size(); j++) {
@@ -72,9 +72,41 @@ double aco_objective_function(const vector<Edge> &edges, const vector<Edge> &rec
 
     ParticleSwarm ps(min_bound, max_bound, arguments);
 
+    //run EA
     ps.iterate(objective_function);
 
-    //run EA
+    //set the weights using the best found individual  
+    vector<double> global_best = ps.get_global_best();
+    int current = 0;
+    for (int i = 0; i < edges.size(); i++) {
+        edges[i].weight = global_best[current];
+        current++;
+    }
+
+    for (int i = 0; i < recurrent_edges.size(); i++) {
+        recurrent_edges[i].weight = global_best[current];
+        current++;
+    }
+
+    /*
+    cout << "#feed forward edges" << endl;
+    for (int j = 0; j < edges.size(); j++) {
+        cout << edges[j].src_layer << " " << edges[j].dst_layer << " " << edges[j].src_node << " " << edges[j].dst_node << " " << edges[j].weight << endl;
+    }
+    cout << endl;
+
+    cout << "#recurrent edges" << endl;
+    for (int j = 0; j < recurrent_edges.size(); j++) {
+        cout << recurrent_edges[j].src_layer << " " << recurrent_edges[j].dst_layer << " " << recurrent_edges[j].src_node << " " << recurrent_edges[j].dst_node << " " << recurrent_edges[j].weight << endl;
+    }
+    cout << endl;
+    */
+
+    /*
+    cout << "global best.size: " << global_best.size() << endl;
+    cout << "edges.size: " << edges.size() << endl;
+    cout << "recurrent_edges.size: " << recurrent_edges.size() << endl;
+    */
 
     return ps.get_global_best_fitness();
 }
@@ -99,7 +131,24 @@ double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const v
     ts_nn->initialize_nodes(n_hidden_layers, nodes_per_layer);
     ts_nn->set_edges(edges, recurrent_edges);
 
-    double fitness = ts_nn->objective_function();
+    //double fitness = ts_nn->objective_function();
+
+    vector<double> starting_point;
+    for (int i = 0; i < edges.size(); i++) {
+        starting_point.push_back(edges[i].weight);
+    }
+    for (int i = 0; i < recurrent_edges.size(); i++) {
+        starting_point.push_back(recurrent_edges[i].weight);
+    }
+    vector<double> step_size( starting_point.size(), 0.0001 );
+
+
+    double fitness;
+    vector<double> final_parameters;
+    synchronous_gradient_descent(arguments, objective_function, starting_point, step_size, final_parameters, fitness);
+
+    cout << "n_hidden_layers: " << n_hidden_layers << ", nodes per layer: " << nodes_per_layer << ", starting_point.size(): " << starting_point.size() << ", step_size.size(): " << step_size.size() << ", fitness: " << fitness << endl;
+
     return fitness;
 }
 
@@ -124,14 +173,16 @@ int main(int argc, char** argv) {
     vector<string> column_headers;
     read_flight_file(input_filename, time_series_rows, time_series_columns, flight_data, column_headers);
 
-    cerr << "# time series columns = " << time_series_columns << endl;
-    cerr << "# time series rows = " << time_series_rows << endl;
+    //cerr << "# time series columns = " << time_series_columns << endl;
+    //cerr << "# time series rows = " << time_series_rows << endl;
 
     column_headers.erase(column_headers.begin());
     column_headers.erase(column_headers.begin());
+    /*
     cerr << "#";
     for (int i = 0; i < column_headers.size(); i++) cerr << " " << column_headers[i];
     cerr << endl;
+    */
 
     //set the time series data from the flight data
     double **time_series_data;
@@ -151,6 +202,7 @@ int main(int argc, char** argv) {
         }
     }
 
+    /*
     cerr << "#";
     for (int i = 0; i < time_series_columns; i++) cerr << " " << mins[i];
     cerr << endl;
@@ -158,6 +210,7 @@ int main(int argc, char** argv) {
     cerr << "#";
     for (int i = 0; i < time_series_columns; i++) cerr << " " << maxs[i];
     cerr << endl;
+    */
 
     for (int i = 0; i < time_series_rows; i++) {
         for (int j = 0; j < time_series_columns; j++) {
@@ -213,16 +266,14 @@ int main(int argc, char** argv) {
     ts_nn = new TimeSeriesNeuralNetwork(output_target);
     ts_nn->set_time_series_data(time_series_data, time_series_rows, time_series_columns);
 
-    string weights_filename;
-    if (get_argument(arguments, "--weights", false, weights_filename)) {
+    string nn_filename;
+    if (get_argument(arguments, "--nn", false, nn_filename)) {
         //read the nn edges and weights from a file, then run it once
-        string nn_filename;
-        get_argument(arguments, "--nn", true, nn_filename);
         ts_nn->read_nn_from_file(nn_filename);
-
         ts_nn->reset();
-        ts_nn->read_weights_from_file(weights_filename);
-        cout << "total error: " << ts_nn->evaluate() << endl;
+
+        double error = ts_nn->evaluate();
+        cout << "total error: " << error << endl;
     } else if (argument_exists(arguments, "--neat_iterations")) {
 
         int neat_iterations;
@@ -232,13 +283,14 @@ int main(int argc, char** argv) {
         double excess_weight = 1.0;
         double disjoint_weight = 1.0;
         double weight_weight = 1.0;
-        double compatibility_threshold = 2.5;
+        double compatibility_threshold = 2.0;
         double normalization = 1.0;
 
         double mutation_without_crossover_rate = 0.25; 
         double add_node_mutation_rate = 0.01; 
         double add_link_mutation_rate = 0.1; 
         double interspecies_crossover_rate = 0.05;
+        double crossover_weight_average_rate = 0.4;
 
         double weight_mutation_rate = 0.8; 
         double random_weight_mutation_rate = 0.1;
@@ -252,7 +304,7 @@ int main(int argc, char** argv) {
 
         NEAT neat(excess_weight, disjoint_weight, weight_weight, compatibility_threshold, normalization,
                   mutation_without_crossover_rate, weight_mutation_rate, add_node_mutation_rate,
-                  add_link_mutation_rate, interspecies_crossover_rate, random_weight_mutation_rate,
+                  add_link_mutation_rate, interspecies_crossover_rate, crossover_weight_average_rate, random_weight_mutation_rate,
                   uniform_weight_mutation_rate, uniform_perturbation, enable_if_both_parents_disabled, population_size);
 
         int n_input_nodes = time_series_columns;
@@ -265,7 +317,9 @@ int main(int argc, char** argv) {
         //know input layer size already
         //get hidden layer size
         //get hidden layer nodes
+        string aco_output_directory;
         int aco_iterations, n_ants, max_edge_pop_size, n_hidden_layers, nodes_per_layer;
+        get_argument(arguments, "--aco_output_directory", true, aco_output_directory);
         get_argument(arguments, "--aco_iterations", true, aco_iterations);
         get_argument(arguments, "--n_ants", true, n_ants);
         get_argument(arguments, "--max_edge_pop_size", true, max_edge_pop_size);
@@ -275,6 +329,8 @@ int main(int argc, char** argv) {
         ts_nn->initialize_nodes(n_hidden_layers, nodes_per_layer);
 
         AntColony ant_colony(n_ants, max_edge_pop_size, time_series_columns, nodes_per_layer, n_hidden_layers);
+
+        ant_colony.set_output_directory(aco_output_directory);
 
         ant_colony_optimization_mpi(aco_iterations, ant_colony, aco_objective_function);
 
@@ -329,7 +385,9 @@ int main(int argc, char** argv) {
             if (search_type.compare("snm") == 0) {
                 synchronous_newton_method(arguments, objective_function, starting_point, step_size);
             } else if (search_type.compare("gd") == 0) {
-                synchronous_gradient_descent(arguments, objective_function, starting_point, step_size);
+                vector<double> final_parameters;
+                double final_fitness;
+                synchronous_gradient_descent(arguments, objective_function, starting_point, step_size, final_parameters, final_fitness);
             } else if (search_type.compare("cgd") == 0) {
                 synchronous_conjugate_gradient_descent(arguments, objective_function, starting_point, step_size);
             }
