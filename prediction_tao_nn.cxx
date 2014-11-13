@@ -325,6 +325,7 @@ int main(int argc, char** argv) {
         AntColony ant_colony(n_ants, max_edge_pop_size, time_series_columns, nodes_per_layer, n_hidden_layers);
 
         ant_colony.set_output_directory(aco_output_directory);
+        ant_colony.set_compression(true);
 
         ant_colony_optimization_mpi(aco_iterations, ant_colony, aco_objective_function);
 
