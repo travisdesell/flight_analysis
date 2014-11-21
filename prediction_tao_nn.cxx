@@ -320,9 +320,14 @@ int main(int argc, char** argv) {
         get_argument(arguments, "--n_hidden_layers", true, n_hidden_layers);
         get_argument(arguments, "--nodes_per_layer", true, nodes_per_layer);
 
+        double pheromone_degradation_rate, pheromone_minimum, pheromone_maximum;
+        get_argument(arguments, "--pheromone_degradation_rate", true, pheromone_degradation_rate);
+        get_argument(arguments, "--pheromone_minimum", true, pheromone_minimum);
+        get_argument(arguments, "--pheromone_maximum", true, pheromone_maximum);
+
         ts_nn->initialize_nodes(n_hidden_layers, nodes_per_layer);
 
-        AntColony ant_colony(n_ants, max_edge_pop_size, time_series_columns, nodes_per_layer, n_hidden_layers);
+        AntColony ant_colony(n_ants, max_edge_pop_size, time_series_columns, nodes_per_layer, n_hidden_layers, pheromone_degradation_rate, pheromone_minimum, pheromone_maximum);
 
         ant_colony.set_output_directory(aco_output_directory);
         ant_colony.set_compression(false);
