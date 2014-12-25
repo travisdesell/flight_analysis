@@ -2,7 +2,7 @@
 
 reset
 set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
-set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set terminal pngcairo font "Times New Roman,64" size 3000, 1500 crop
 set title "MSL Altitude Estimation"
 set datafile missing "-"
 
@@ -12,12 +12,12 @@ set ylabel "Normalized MSL Altitude"
 set xlabel "Timestep"
 set output altitude_output_file
 
-plot input_file every 1 u 8 ti 'Predicted MSL Altitude', \
-     input_file every 1 u 9 ti 'Actual MSL Altitude'
+plot input_file_altitude every 1 u 1 ti 'Predicted MSL Altitude', \
+     input_file_altitude every 1 u 2 ti 'Actual MSL Altitude'
 
 reset
 set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
-set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set terminal pngcairo font "Times New Roman,64" size 3000, 1500 crop
 set title "Roll Estimation"
 set datafile missing "-"
 
@@ -27,12 +27,12 @@ set ylabel "Normalized Roll"
 set xlabel "Timestep"
 set output roll_output_file
 
-plot input_file every 1 u 2 ti 'Predicted Roll Attitude', \
-     input_file every 1 u 3 ti 'Actual Roll Attitude'
+plot input_file_roll every 1 u 1 ti 'Predicted Roll Attitude', \
+     input_file_roll every 1 u 2 ti 'Actual Roll Attitude'
 
 reset
 set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
-set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set terminal pngcairo font "Times New Roman,64" size 3000, 1500 crop
 set title "Pitch Estimation"
 set datafile missing "-"
 
@@ -42,12 +42,12 @@ set ylabel "Normalized Pitch"
 set xlabel "Timestep"
 set output pitch_output_file
 
-plot input_file every 1 u 4 ti 'Predicted Pitch Attitude', \
-     input_file every 1 u 5 ti 'Actual Pitch Altitude'
+plot input_file_pitch every 1 u 1 ti 'Predicted Pitch Attitude', \
+     input_file_pitch every 1 u 2 ti 'Actual Pitch Altitude'
 
 reset
 set key right top box opaque font "Times New Roman, 48" samplen 2 width -6
-set terminal png font "Times New Roman,64" size 3000, 1500 crop
+set terminal pngcairo font "Times New Roman,64" size 3000, 1500 crop
 set title "Airspeed Estimation"
 set datafile missing "-"
 
@@ -57,6 +57,6 @@ set ylabel "Normalized Airspeed"
 set xlabel "Timestep"
 set output airspeed_output_file
 
-plot input_file every 1 u 6 ti 'Predicted Airspeed', \
-     input_file every 1 u 7 ti 'Actual Airspeed'
+plot input_file_airspeed every 1 u 1 ti 'Predicted Airspeed', \
+     input_file_airspeed every 1 u 2 ti 'Actual Airspeed'
 

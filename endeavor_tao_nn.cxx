@@ -14,6 +14,7 @@ using std::endl;
 
 #include <iomanip>
 using std::setw;
+using std::setprecision;
 
 #include <cmath>
 
@@ -157,96 +158,75 @@ int main(int argc, char** argv) {
 
     arguments = vector<string>(argv, argv + argc);
 
-    string input_filename;
-    get_argument(arguments, "--input_filename", true, input_filename);
-
     //read the flight data
-    unsigned int time_series_rows;
-    unsigned int time_series_columns;
-    double* flight_data = NULL;
+
+    //make a vector of the parameters we're going to analyze with the NN
+    //JIM SUGGESTS THESE:
     vector<string> column_headers;
-    read_flight_file(input_filename, time_series_rows, time_series_columns, flight_data, column_headers);
+    column_headers.push_back("ALT_STD");    //ALT_STD Pressure Alt    
+    //column_headers.push_back("ALT_CPT");    //ALT_CPT Baro 1 Altimeter (inHg) 
+    //column_headers.push_back("ALT_FO");     //ALT_FO  Baro 2 Altimeter (inHg) 
+    //column_headers.push_back("ALT_SEL");    //ALT_SEL Selected altitude   
+    column_headers.push_back("AOAL");
+    column_headers.push_back("AOAR");
+//    column_headers.push_back("FF1");        //fuel flow - engine 1
+//    column_headers.push_back("FF2");        //fuel flow - engine 2
+//    column_headers.push_back("GS");
+    column_headers.push_back("IAS");        //indicated airspeed
+    column_headers.push_back("ITT_1");      //interstage turbine temp - engine 1
+    column_headers.push_back("ITT_2");      //interstage turbine temp - engine 2
+    column_headers.push_back("IVV_R");      //vertical speed (feet per minute)
+    column_headers.push_back("BLD_PRS1");   //bleed pressure (psi) - engine 1
+    column_headers.push_back("BLD_PRS2");   //bleed pressure (psi) - engine 2
+    column_headers.push_back("HYD_PRS1");   //hydrolic pressure valve fully closed - engine 1
+    column_headers.push_back("HYD_PRS2");   //hydrolic pressure valve fully closed - engine 2
+//    column_headers.push_back("N11");
+//    column_headers.push_back("N12");
+//    column_headers.push_back("N21");
+//    column_headers.push_back("N22");
+    column_headers.push_back("OIL_PRS_L");
+    column_headers.push_back("OIL_PRS_R");
+    column_headers.push_back("OIL_QTY1");
+    column_headers.push_back("OIL_QTY2");
+    column_headers.push_back("OIL_TMP1");
+    column_headers.push_back("OIL_TMP2");
+    column_headers.push_back("PITCH");
+    column_headers.push_back("PITCH2");
+    column_headers.push_back("PLA1");
+    column_headers.push_back("PLA2");
+    column_headers.push_back("ROLL");
+    column_headers.push_back("ROLL_TRIM_P");
+    column_headers.push_back("RUDD");
+    column_headers.push_back("RUDD_TRIM_P");
+    column_headers.push_back("SAT");
+    column_headers.push_back("TAT");
+    column_headers.push_back("VIB_N11");
+    column_headers.push_back("VIB_N12");
+    column_headers.push_back("VIB_N21");
+    column_headers.push_back("VIB_N22");
 
-    //cerr << "# time series columns = " << time_series_columns << endl;
-    //cerr << "# time series rows = " << time_series_rows << endl;
+    int n_positives = 0, n_negatives = 0;
+    vector<string> positive_flights, negative_flights;
+    vector<uint32_t> positives_rows, negatives_rows;
+    vector<uint32_t> positives_columns, negatives_columns;
 
-    column_headers.erase(column_headers.begin());
-    column_headers.erase(column_headers.begin());
-    /*
-    cerr << "#";
-    for (int i = 0; i < column_headers.size(); i++) cerr << " " << column_headers[i];
-    cerr << endl;
-    */
+    double ***positives_data = NULL;
+    double ***negatives_data = NULL;
 
-    //set the time series data from the flight data
-    double **time_series_data;
+    string positives_filename, negatives_filename;
+    if (get_argument(arguments, "--positives_file", false, positives_filename)) {
+        get_argument(arguments, "--negatives_file", true, negatives_filename);
 
-    //normalize the data
-    vector<double> mins(time_series_columns, numeric_limits<double>::max());
-    vector<double> maxs(time_series_columns, -numeric_limits<double>::max());
+        get_flight_files_from_file(positives_filename, positive_flights);
+        get_flight_files_from_file(negatives_filename, negative_flights);
 
-    time_series_data = new double*[time_series_rows];
-    for (int i = 0; i < time_series_rows; i++) {
-        time_series_data[i] = new double[time_series_columns];
-        for (int j = 0; j < time_series_columns; j++) {
-            time_series_data[i][j] = flight_data[(i * time_series_columns) + j];
-
-            if (time_series_data[i][j] < mins[j]) mins[j] = time_series_data[i][j];
-            if (time_series_data[i][j] > maxs[j]) maxs[j] = time_series_data[i][j];
-        }
-    }
-
-    /*
-    cerr << "#";
-    for (int i = 0; i < time_series_columns; i++) cerr << " " << mins[i];
-    cerr << endl;
-
-    cerr << "#";
-    for (int i = 0; i < time_series_columns; i++) cerr << " " << maxs[i];
-    cerr << endl;
-    */
-
-    for (int i = 0; i < time_series_rows; i++) {
-        for (int j = 0; j < time_series_columns; j++) {
-
-            if (0 == column_headers[j].compare("roll_attitude")) {
-                time_series_data[i][j] = time_series_data[i][j] / 60;
-
-            } else if (0 == column_headers[j].compare("pitch_attitude")) {
-                time_series_data[i][j] = time_series_data[i][j] / 60;
-
-            } else if (0 == column_headers[j].compare("indicated_airspeed")) {
-                time_series_data[i][j] = time_series_data[i][j] / 200;
-
-            } else if (0 == column_headers[j].compare("msl_altitude")) {
-                time_series_data[i][j] = time_series_data[i][j] / 6000;
-
-            } else {
-                time_series_data[i][j] = (time_series_data[i][j] - mins[j]) / (maxs[j] - mins[j]);
-            }
-        }
-    }
-
-
-    string output_str;
-    get_argument(arguments, "--output_target", true, output_str);
-
-    int output_target = -1;
-    if (0 == output_str.compare("roll")) {
-        output_target = 0;
-    } else if (0 == output_str.compare("pitch")) {
-        output_target = 1;
-    } else if (0 == output_str.compare("airspeed")) {
-        output_target = 2;
-    } else if (0 == output_str.compare("altitude")) {
-        output_target = 3;
     } else {
-        cerr << "Error, misspecified output target '" << output_str << "', possibilities:" << endl;
-        cerr << "    airspeed" << endl;
-        cerr << "    roll" << endl;
-        cerr << "    pitch" << endl;
-        cerr << "    altitude" << endl;
-        exit(1);
+        string positives_dir, negatives_dir;
+        get_argument(arguments, "--positives_dir", true, positives_dir);
+        get_argument(arguments, "--negatives_dir", true, negatives_dir);
+
+        get_flight_files_from_directory(positives_dir, positive_flights);
+        get_flight_files_from_directory(negatives_dir, negative_flights);
     }
 
     long seed;
@@ -256,7 +236,26 @@ int main(int argc, char** argv) {
         srand48(time(NULL));
     }
 
+    while (negative_flights.size() > 200) {
+        negative_flights.erase( negative_flights.begin() + (negative_flights.size() * drand48()) );
+    }
 
+    read_flights(positive_flights, column_headers, n_positives, positives_rows, positives_columns, positives_data, true);
+    read_flights(negative_flights, column_headers, n_negatives, negatives_rows, negatives_columns, negatives_data, true);
+
+
+    cerr << "#";
+    for (int i = 0; i < column_headers.size(); i++) cerr << " " << column_headers[i];
+    cerr << endl;
+
+    cout << "normalizing data sets" << endl;
+    normalize_data_sets(column_headers, n_positives, positives_data, positives_rows, positives_columns, n_negatives, negatives_data, negatives_rows, negatives_columns);
+
+
+    double **time_series_data = NULL;
+    int time_series_rows = 0;
+    int time_series_columns = 0;
+    int output_target = 0;
     ts_nn = new TimeSeriesNeuralNetwork(output_target);
     ts_nn->set_time_series_data(time_series_data, time_series_rows, time_series_columns);
 

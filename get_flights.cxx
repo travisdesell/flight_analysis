@@ -24,6 +24,10 @@ using std::vector;
 
 #include <limits>
 
+//From boost
+#include <boost/filesystem.hpp>
+using boost::filesystem::create_directories;
+
 //For MYSQL
 #include "mysql.h"
 
@@ -48,6 +52,10 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
         cerr << "Did not write flight, flight_data.size() == 0" << endl;
         return;
     }
+
+    string filepath = filename.substr( 0, filename.rfind('/') );
+    cout << "filepath is: " << filepath << endl;
+    create_directories(filepath);
 
     ofstream *file = new ofstream(filename.c_str());
 
@@ -155,6 +163,15 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
     (*file) << endl;
 
 
+    for (uint32_t i = 0; i < column_names.size(); i++) {
+        if (i == 0) {
+            (*file) << column_names[i];
+        } else {
+            (*file) << ", " << column_names[i];
+        }
+    }
+    (*file) << endl;
+
  
     for (uint32_t i = 0; i < flight_data.size(); i++) {
        vector<string> *flight_row = flight_data.at(i);
@@ -166,7 +183,11 @@ void write_flight_data(string filename, const vector< vector<string>* > &flight_
             //normalize the flight data between 0 and 1
 //            (*file) << " " << ((atof(flight_row->at(j).c_str()) - min[j]) / (max[j] - min[j]));
 //            (*file) << " " << atof(flight_row->at(j).c_str());
-            (*file) << " " << flight_row->at(j);
+            if (j == 0) {
+                (*file) << flight_row->at(j);
+            } else {
+                (*file) << ", " << flight_row->at(j);
+            }
         }
         (*file) << endl;
     }
