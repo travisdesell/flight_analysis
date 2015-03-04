@@ -19,6 +19,8 @@ void normalize_data_sets(const vector<string> &column_headers, int n_flights1, d
 
 void normalize_data(double **data, int rows, int columns);
 
+void get_output_data(double **input_data, int rows, int cols, const vector<string> &input_headers, const vector<string> &output_headers, double ***output_data);
+
 void write_flight_data(string output_file, const vector<string> &column_names, double **data, int rows, int columns);
 
 #endif

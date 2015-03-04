@@ -145,9 +145,8 @@ void read_flight_file(string input_filename, const vector<string> &column_header
     }
 
     cols = file_column_headers.size();
-    /*
-    cout << "cols: " << cols << endl;
 
+    /*
     cout << "requested headers (" << column_headers.size() << "): ";
     for (int i = 0; i < column_headers.size(); i++) {
         cout << " " << column_headers[i];
@@ -199,30 +198,24 @@ void read_flight_file(string input_filename, const vector<string> &column_header
             tokenizer<char_separator<char> > tok(s, sep);
 
             for (tokenizer< char_separator<char> >::iterator i = tok.begin(); i != tok.end(); ++i) {
-                if (position == 0) {
-                    position++;
-                    continue;
-                }
     //            cout << "token is: '" << *i << "', assigning to position: " << (position - 1) << endl;
 
-                flight_row.at(position - 1) = atof( (*i).c_str() );
+                flight_row.at(position) = atof( (*i).c_str() );
                 position++;
             }
 
             /*
-            cout << "pushing back" << endl;
-            cout << "flight row:" << endl;
+            cout << "pushing back flight row:" << endl;
             for (int i = 0; i < flight_row.size(); i++) {
-                cout << " " << flight_row[i];
+                cout << " '" << flight_row[i] << "'";
             }
             cout << endl;
             cout << "flight_data.size(): " << flight_data.size() << ", capacity: " << flight_data.capacity() << endl;
             */
-    //        if (flight_row[2] > 0) {    //only use rows with indicated airspeed > 0
-                flight_data.push_back(flight_row);
-    //        }
 
-    //        cout << "getting next line" << endl;
+            flight_data.push_back(flight_row);
+
+            //        cout << "getting next line" << endl;
             getline( input_file, s);
         }
     } else {
@@ -352,6 +345,13 @@ void read_flight_file(string input_filename, const vector<string> &column_header
 //            cout << "assigning final_flight_data[" << i << "][" << j << "] = flight_data[" << i << "][" << requested_columns[j] << "]" << endl;
             final_flight_data[i][j] = flight_data[i][requested_columns[j]];
         }
+
+        /*
+        for (unsigned int j = 0; j < column_headers.size(); j++) {
+            cout << " " << final_flight_data[i][j];
+        }
+        cout << endl;
+        */
     }
 
     cols = column_headers.size();
@@ -586,7 +586,52 @@ void normalize_data(double **data, int rows, int columns) {
             data[i][j] = (data[i][j] - mins[j]) / (maxs[j] - mins[j]);
         }
     }
+}
 
+
+void get_output_data(double **input_data, int rows, int cols, const vector<string> &input_headers, const vector<string> &output_headers, double ***output_data) {
+    /*
+    cout << "input_headers.size: " << input_headers.size() << endl;
+    cout << "input headers: ";
+    for (uint32_t i = 0; i < input_headers.size(); i++) {
+        cout << " " << input_headers.at(i);
+    }
+    cout << endl;
+
+    cout << "output_headers.size: " << output_headers.size() << endl;
+    cout << "output headers: ";
+    for (uint32_t i = 0; i < output_headers.size(); i++) {
+        cout << " " << output_headers.at(i);
+    }
+    cout << endl;
+    */
+
+
+    vector<uint32_t> output_columns;
+    for (uint32_t i = 0; i < output_headers.size(); i++) {
+        for (uint32_t j = 0; j < input_headers.size(); j++) {
+            if (output_headers.at(i).compare( input_headers.at(j) ) == 0) {
+                output_columns.push_back(j);
+            }
+        }
+    }
+
+    if (output_columns.size() != output_headers.size()) {
+        cerr << "ERROR: one or more of the output columns not found, output_columns.size(): " << output_columns.size() << endl;
+        exit(1);
+    }
+
+//    cout << "output data:" << endl;
+    (*output_data) = new double*[rows - 1];
+    for (uint32_t i = 0; i < rows - 1; i++) {
+        (*output_data)[i] = new double[output_columns.size()];
+
+        for (uint32_t j = 0; j < output_columns.size(); j++) {
+            (*output_data)[i][j] = input_data[i+1][output_columns.at(j)];
+//            cout << " " << (*output_data)[i][j];
+        }
+//        cout << endl;
+    }
 }
 
 

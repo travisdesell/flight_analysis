@@ -118,18 +118,14 @@ int main(int argc, char** argv) {
     bool is_endeavor;
     get_argument(arguments, "--is_endeavor", true, is_endeavor);
 
-    string flight_file;
-    get_argument(arguments, "--flight_file", true, flight_file);
+    vector<string> flight_files;
+    get_argument_vector(arguments, "--flight_files", true, flight_files);
 
     vector<string> flight_parameters;
     get_argument_vector(arguments, "--use_parameters", true, flight_parameters);
 
-    string output_file;
-    get_argument(arguments, "--output_file", true, output_file);
-
-
-    vector<string> flight_files;
-    flight_files.push_back(flight_file);
+    string output_directory;
+    get_argument(arguments, "--output_directory", true, output_directory);
 
     int n_flights = 0;
     vector<uint32_t> rows, columns;
@@ -140,9 +136,16 @@ int main(int argc, char** argv) {
     for (int i = 0; i < flight_parameters.size(); i++) cerr << " " << flight_parameters[i];
     cerr << endl;
 
-    normalize_data(flight_data[0], rows[0], columns[0]);
+    for (int i = 0; i < n_flights; i++) {
+//        normalize_data(flight_data[i], rows[i], columns[i]);
 
-    write_flight_data(output_file, flight_parameters, flight_data[0], rows[0], columns[0]);
+        ostringstream oss;
+        oss << output_directory << flight_files[i].substr(flight_files[i].rfind("/")) << endl;
+
+        cout << "writing to: '" << oss.str() << "'";
+
+        write_flight_data(oss.str(), flight_parameters, flight_data[i], rows[i], columns[i]);
+    }
 
     return 0;
 }

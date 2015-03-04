@@ -24,13 +24,14 @@ using std::setprecision;
 
 //from TAO
 #include "neural_networks/edge.hxx"
-#include "neural_networks/time_series_neural_network.hxx"
+#include "neural_networks/edge_new.hxx"
+#include "neural_networks/neural_network.hxx"
 
-#include "mpi/mpi_ant_colony_optimization.hxx"
+#include "mpi/mpi_ant_colony_optimization_new.hxx"
 #include "mpi/mpi_particle_swarm.hxx"
 #include "mpi/mpi_differential_evolution.hxx"
 
-#include "asynchronous_algorithms/ant_colony_optimization.hxx"
+#include "asynchronous_algorithms/ant_colony_optimization_new.hxx"
 #include "asynchronous_algorithms/neat.hxx"
 #include "asynchronous_algorithms/particle_swarm.hxx"
 #include "asynchronous_algorithms/differential_evolution.hxx"
@@ -43,15 +44,15 @@ using std::setprecision;
 #include "arguments.hxx"
 
 
-TimeSeriesNeuralNetwork *ts_nn;
+NeuralNetwork *nn;
 
 double objective_function(const vector<double> &parameters) {
-    return ts_nn->objective_function(parameters);
+    return nn->objective_function(parameters);
 }
 
 vector<string> arguments;
 
-double aco_objective_function(vector<Edge> &edges, vector<Edge> &recurrent_edges) {
+double aco_objective_function(vector<EdgeNew> &edges, vector<EdgeNew> &recurrent_edges) {
     /*
     cout << "#feed forward edges" << endl;
     for (int j = 0; j < edges.size(); j++) {
@@ -66,10 +67,15 @@ double aco_objective_function(vector<Edge> &edges, vector<Edge> &recurrent_edges
     cout << endl;
     */
 
-    ts_nn->set_edges(edges, recurrent_edges);
+    //cout << "edges.size(): " << edges.size() << ", recurrent_edges.size(): " << recurrent_edges.size() << endl;
 
-    vector<double> min_bound(ts_nn->get_n_edges(), -1.5);
-    vector<double> max_bound(ts_nn->get_n_edges(),  1.5);
+    nn->reset();
+    nn->set_edges(edges, recurrent_edges);
+
+    vector<double> min_bound(nn->get_parameter_size(), -1.5);
+    vector<double> max_bound(nn->get_parameter_size(),  1.5);
+
+    //cout << "parameter size: " << nn->get_parameter_size() << endl;
 
     ParticleSwarm ps(min_bound, max_bound, arguments);
 
@@ -108,7 +114,7 @@ double aco_objective_function(vector<Edge> &edges, vector<Edge> &recurrent_edges
     return ps.get_global_best_fitness();
 }
 
-double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const vector<Edge> &edges, const vector<Edge> &recurrent_edges) {
+//double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const vector<Edge> &edges, const vector<Edge> &recurrent_edges) {
     /*
     cout << "#feed forward edges" << endl;
     for (int j = 0; j < edges.size(); j++) {
@@ -125,6 +131,7 @@ double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const v
     cout << "n_hidden_layers: " << n_hidden_layers << ", nodes_per_layer: " << nodes_per_layer << endl;
     */
 
+/*
     ts_nn->initialize_nodes(n_hidden_layers, nodes_per_layer);
     ts_nn->set_edges(edges, recurrent_edges);
 
@@ -146,7 +153,7 @@ double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const v
 
     return fitness;
 }
-
+*/
 
 
 int main(int argc, char** argv) {
@@ -158,53 +165,216 @@ int main(int argc, char** argv) {
 
     arguments = vector<string>(argv, argv + argc);
 
-    //read the flight data
+    long seed;
+    if (get_argument(arguments, "--seed", false, seed)) {
+        srand48(seed);
+    } else {
+        srand48(time(NULL));
+    }
 
-    //make a vector of the parameters we're going to analyze with the NN
-    //JIM SUGGESTS THESE:
+    string endeavor_headers[] = {"ALT_STD", "AOAL", "AOAR", "IAS", "ITT_1", "ITT_2", "IVV_R", "BLD_PRS1", "BLD_PRS2", "HYD_PRS1", "HYD_PRS2", "OIL_PRS_L", "OIL_PRS_R", "OIL_QTY1", "OIL_QTY2", "OIL_TMP1", "OIL_TMP2", "PITCH", "PITCH2", "PLA1", "PLA2", "ROLL", "ROLL_TRIM_P", "RUDD", "RUDD_TRIM_P", "SAT", "TAT", "VIB_N11", "VIB_N12", "VIB_N21", "VIB_N22"};
+
+    string ngafid_headers[] = {"indicated_airspeed", "msl_altitude", "pitch_attitude", "roll_attitude"};
+
     vector<string> column_headers;
-    column_headers.push_back("ALT_STD");    //ALT_STD Pressure Alt    
-    //column_headers.push_back("ALT_CPT");    //ALT_CPT Baro 1 Altimeter (inHg) 
-    //column_headers.push_back("ALT_FO");     //ALT_FO  Baro 2 Altimeter (inHg) 
-    //column_headers.push_back("ALT_SEL");    //ALT_SEL Selected altitude   
-    column_headers.push_back("AOAL");
-    column_headers.push_back("AOAR");
-//    column_headers.push_back("FF1");        //fuel flow - engine 1
-//    column_headers.push_back("FF2");        //fuel flow - engine 2
-//    column_headers.push_back("GS");
-    column_headers.push_back("IAS");        //indicated airspeed
-    column_headers.push_back("ITT_1");      //interstage turbine temp - engine 1
-    column_headers.push_back("ITT_2");      //interstage turbine temp - engine 2
-    column_headers.push_back("IVV_R");      //vertical speed (feet per minute)
-    column_headers.push_back("BLD_PRS1");   //bleed pressure (psi) - engine 1
-    column_headers.push_back("BLD_PRS2");   //bleed pressure (psi) - engine 2
-    column_headers.push_back("HYD_PRS1");   //hydrolic pressure valve fully closed - engine 1
-    column_headers.push_back("HYD_PRS2");   //hydrolic pressure valve fully closed - engine 2
-//    column_headers.push_back("N11");
-//    column_headers.push_back("N12");
-//    column_headers.push_back("N21");
-//    column_headers.push_back("N22");
-    column_headers.push_back("OIL_PRS_L");
-    column_headers.push_back("OIL_PRS_R");
-    column_headers.push_back("OIL_QTY1");
-    column_headers.push_back("OIL_QTY2");
-    column_headers.push_back("OIL_TMP1");
-    column_headers.push_back("OIL_TMP2");
-    column_headers.push_back("PITCH");
-    column_headers.push_back("PITCH2");
-    column_headers.push_back("PLA1");
-    column_headers.push_back("PLA2");
-    column_headers.push_back("ROLL");
-    column_headers.push_back("ROLL_TRIM_P");
-    column_headers.push_back("RUDD");
-    column_headers.push_back("RUDD_TRIM_P");
-    column_headers.push_back("SAT");
-    column_headers.push_back("TAT");
-    column_headers.push_back("VIB_N11");
-    column_headers.push_back("VIB_N12");
-    column_headers.push_back("VIB_N21");
-    column_headers.push_back("VIB_N22");
+    
+    bool endeavor_data;
+    if (argument_exists(arguments, "--endeavor")) {
+        endeavor_data = true;
+        column_headers = vector<string>(endeavor_headers, endeavor_headers + 31);
+    } else {
+        endeavor_data = false;
+        column_headers = vector<string>(ngafid_headers, ngafid_headers + 4);
+    }
 
+    string flight_filename;
+    get_argument(arguments, "--flight_file", true, flight_filename);
+
+    uint32_t rows, cols;
+    double **flight_data = NULL;
+
+    read_flight_file(flight_filename, column_headers, rows, cols, flight_data, endeavor_data);
+
+    if (argument_exists(arguments, "--normalize_data")) {
+        //normalize the data
+        vector<double> mins(cols, numeric_limits<double>::max());
+        vector<double> maxs(cols, -numeric_limits<double>::max());
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (flight_data[i][j] < mins[j]) mins[j] = flight_data[i][j];
+                if (flight_data[i][j] > maxs[j]) maxs[j] = flight_data[i][j];
+            }   
+        }   
+
+        if (rank == 0) {
+            cerr << "#headers: ";
+            for (int i = 0; i < cols; i++) cerr << " " << column_headers[i];
+            cerr << endl;
+
+            cerr << "#minimums: ";
+            for (int i = 0; i < cols; i++) cerr << " " << mins[i];
+            cerr << endl;
+
+            cerr << "#maximums: ";
+            for (int i = 0; i < cols; i++) cerr << " " << maxs[i];
+            cerr << endl;
+        }
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (0 == column_headers[j].compare("roll_attitude")) {
+                    flight_data[i][j] = flight_data[i][j] / 60; 
+
+                } else if (0 == column_headers[j].compare("pitch_attitude")) {
+                    flight_data[i][j] = flight_data[i][j] / 60; 
+
+                } else if (0 == column_headers[j].compare("indicated_airspeed")) {
+                    flight_data[i][j] = flight_data[i][j] / 200;
+
+                } else if (0 == column_headers[j].compare("msl_altitude")) {
+                    flight_data[i][j] = flight_data[i][j] / 6000;
+
+                } else {
+                    flight_data[i][j] = (flight_data[i][j] - mins[j]) / (maxs[j] - mins[j]);
+                }   
+            }   
+        }   
+    }
+
+    if (argument_exists(arguments, "--print_flight_data")) {
+        cout << "#";
+        for (int i = 0; i < column_headers.size(); i++) cout << " " << column_headers[i];
+        cout << endl;
+
+        for (uint32_t i = 0; i < rows; i++) {
+            for (uint32_t j = 0; j < cols; j++) {
+                cout << " " << flight_data[i][j];
+            }
+            cout << endl;
+        }
+    }
+
+
+    vector<string> output_headers;
+    get_argument_vector(arguments, "--output_headers", true, output_headers);
+
+    double **output_data;
+    get_output_data(flight_data, rows, cols, column_headers, output_headers, &output_data);
+
+    if (argument_exists(arguments, "--print_output_data")) {
+        cout << "#";
+        for (int i = 0; i < output_headers.size(); i++) cout << " " << output_headers[i];
+        cout << endl;
+
+        for (uint32_t i = 0; i < rows - 1; i++) {
+            for (uint32_t j = 0; j < output_headers.size(); j++) {
+                cout << " " << output_data[i][j];
+            }
+            cout << endl;
+        }
+    }
+
+
+
+    double pheromone_placement_rate = 1.0;
+    double pheromone_degradation_rate = 0.95;
+    double maximum_pheromone = 20.0;
+    double minimum_pheromone = 1.0;
+    uint32_t number_ants = 16;
+    uint32_t recurrent_depth = 2;
+    uint32_t n_input_nodes = cols;
+    uint32_t n_hidden_layers = 1;
+    uint32_t n_hidden_nodes = 4;
+    uint32_t n_output_nodes = output_headers.size();
+
+    /*
+    AntColonyNew *aco_new = new AntColonyNew(pheromone_placement_rate, pheromone_degradation_rate, maximum_pheromone, minimum_pheromone, number_ants, recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes);
+
+    vector<EdgeNew> edges;
+    vector<EdgeNew> recurrent_edges;
+
+    //aco_new->generate_neural_network(edges, recurrent_edges);
+    //aco_new->generate_fully_connected_neural_network(edges, recurrent_edges);
+
+    // THIS IS A JORDAN NETWORK
+    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 0));
+    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 1));
+    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 2));
+    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 3));
+
+    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 0));
+    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 1));
+    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 2));
+    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 3));
+
+    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 0));
+    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 1));
+    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 2));
+    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 3));
+
+    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 0));
+    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 1));
+    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 2));
+    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 3));
+
+    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 0));
+    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 1));
+    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 2));
+    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 3));
+
+    edges.push_back(EdgeNew(0, 1, 0, 0, 2, 0));
+    edges.push_back(EdgeNew(0, 1, 1, 0, 2, 0));
+    edges.push_back(EdgeNew(0, 1, 2, 0, 2, 0));
+    edges.push_back(EdgeNew(0, 1, 3, 0, 2, 0));
+
+    recurrent_edges.push_back(EdgeNew(0, 2, 0, 1, 0, 0));
+    */
+
+    /*
+    cout << "#edges" << endl;
+    for (uint32_t i = 0; i < edges.size(); i++) {
+        cout << "    " << edges.at(i) << endl;
+    }
+    cout << endl;
+
+    cout << "#recurrent_edges" << endl;
+    for (uint32_t i = 0; i < recurrent_edges.size(); i++) {
+        cout << "    " << recurrent_edges.at(i) << endl;
+    }
+    cout << endl;
+    */
+
+    nn = new NeuralNetwork(recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes, linear_activation_function, linear_derivative);
+
+    /*
+    nn->set_edges(edges, recurrent_edges, column_headers, output_headers);
+
+    if (rank == 0) {
+        cout << nn->json() << endl;
+
+        if (argument_exists(arguments, "--write_nn")) {
+            string nn_json_filename;
+            get_argument(arguments, "--write_nn", true, nn_json_filename);
+            
+            nn->write_to_file(nn_json_filename);
+        }
+    }
+    */
+
+    nn->set_training_data(rows - 1, cols, flight_data, 1, output_data);
+
+    /*
+    vector<double> weights;
+    for (uint32_t i = 0; i < nn->get_parameter_size(); i++) {
+        weights.push_back( (drand48() * 0.01) - 0.05 );
+    }
+
+    cout << "evaluating NN" << endl;
+    cout << nn->evaluate(weights) << endl;
+    */
+
+    /*
     int n_positives = 0, n_negatives = 0;
     vector<string> positive_flights, negative_flights;
     vector<uint32_t> positives_rows, negatives_rows;
@@ -229,20 +399,12 @@ int main(int argc, char** argv) {
         get_flight_files_from_directory(negatives_dir, negative_flights);
     }
 
-    long seed;
-    if (get_argument(arguments, "--seed", false, seed)) {
-        srand48(seed);
-    } else {
-        srand48(time(NULL));
-    }
-
     while (negative_flights.size() > 200) {
         negative_flights.erase( negative_flights.begin() + (negative_flights.size() * drand48()) );
     }
 
-    read_flights(positive_flights, column_headers, n_positives, positives_rows, positives_columns, positives_data, true);
-    read_flights(negative_flights, column_headers, n_negatives, negatives_rows, negatives_columns, negatives_data, true);
-
+    read_flights(positive_flights, column_headers, n_positives, positives_rows, positives_columns, positives_data, endeavor_data);
+    read_flights(negative_flights, column_headers, n_negatives, negatives_rows, negatives_columns, negatives_data, endeavor_data);
 
     cerr << "#";
     for (int i = 0; i < column_headers.size(); i++) cerr << " " << column_headers[i];
@@ -251,23 +413,19 @@ int main(int argc, char** argv) {
     cout << "normalizing data sets" << endl;
     normalize_data_sets(column_headers, n_positives, positives_data, positives_rows, positives_columns, n_negatives, negatives_data, negatives_rows, negatives_columns);
 
-
-    double **time_series_data = NULL;
-    int time_series_rows = 0;
-    int time_series_columns = 0;
-    int output_target = 0;
-    ts_nn = new TimeSeriesNeuralNetwork(output_target);
-    ts_nn->set_time_series_data(time_series_data, time_series_rows, time_series_columns);
+    */
 
     string nn_filename;
+    /*
     if (argument_exists(arguments, "--test_nn")) {
         get_argument(arguments, "--nn", false, nn_filename);
         //read the nn edges and weights from a file, then run it once
-        ts_nn->read_nn_from_file(nn_filename);
-        ts_nn->reset();
+        nn = new NeuralNetwork(nn_filename);
 
-        double error = ts_nn->evaluate();
+        double error = nn->objective_function();
         cout << "total error: " << error << endl;
+        */
+    /*
     } else if (argument_exists(arguments, "--neat_iterations")) {
 
         int neat_iterations;
@@ -304,33 +462,31 @@ int main(int argc, char** argv) {
         int n_input_nodes = time_series_columns;
         int n_output_nodes = 1;
         neat.iterate(neat_iterations, n_input_nodes, n_output_nodes, neat_objective_function);
+    */
 
 
-    } else if (argument_exists(arguments, "--aco_iterations")) {
-        //get number ants
-        //know input layer size already
-        //get hidden layer size
-        //get hidden layer nodes
-        string aco_output_directory;
-        int aco_iterations, n_ants, max_edge_pop_size, n_hidden_layers, nodes_per_layer;
-        get_argument(arguments, "--aco_output_directory", true, aco_output_directory);
+    if (argument_exists(arguments, "--aco_iterations")) {
+        //string aco_output_directory;
+        uint32_t aco_iterations;
+        //get_argument(arguments, "--aco_output_directory", true, aco_output_directory);
         get_argument(arguments, "--aco_iterations", true, aco_iterations);
-        get_argument(arguments, "--n_ants", true, n_ants);
-        get_argument(arguments, "--max_edge_pop_size", true, max_edge_pop_size);
-        get_argument(arguments, "--n_hidden_layers", true, n_hidden_layers);
-        get_argument(arguments, "--nodes_per_layer", true, nodes_per_layer);
 
-        double pheromone_degradation_rate, pheromone_minimum, pheromone_maximum;
+        uint32_t aco_population_size;
+        get_argument(arguments, "--aco_population_size", true, aco_population_size);
+
+        /*
+        uint32_t number_ants;
+        double pheromone_placement_rate, pheromone_degradation_rate, minimum_pheromone, maximum_pheromone;
+        get_argument(arguments, "--pheromone_placement_rate", true, pheromone_placement_rate);
         get_argument(arguments, "--pheromone_degradation_rate", true, pheromone_degradation_rate);
-        get_argument(arguments, "--pheromone_minimum", true, pheromone_minimum);
-        get_argument(arguments, "--pheromone_maximum", true, pheromone_maximum);
+        get_argument(arguments, "--minimum_pheromone", true, minimum_pheromone);
+        get_argument(arguments, "--maximum_pheromone", true, maximum_pheromone);
+        get_argument(arguments, "--number_ants", true, number_ants);
+        */
 
-        ts_nn->initialize_nodes(n_hidden_layers, nodes_per_layer);
+        AntColonyNew ant_colony(pheromone_placement_rate, pheromone_degradation_rate, maximum_pheromone, minimum_pheromone, number_ants, recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes, aco_population_size);
 
-        AntColony ant_colony(n_ants, max_edge_pop_size, time_series_columns, nodes_per_layer, n_hidden_layers, pheromone_degradation_rate, pheromone_minimum, pheromone_maximum);
-
-        ant_colony.set_output_directory(aco_output_directory);
-        ant_colony.set_compression(false);
+        //ant_colony.set_output_directory(aco_output_directory);
 
         ant_colony_optimization_mpi(aco_iterations, ant_colony, aco_objective_function);
 
@@ -338,20 +494,32 @@ int main(int argc, char** argv) {
         //read the nn edges from a file
         string nn_filename;
         get_argument(arguments, "--nn", true, nn_filename);
-        ts_nn->read_nn_from_file(nn_filename);
-        ts_nn->reset();
+        nn = new NeuralNetwork(nn_filename);
 
-        vector<double> min_bound(ts_nn->get_n_edges(), -1.5);
-        vector<double> max_bound(ts_nn->get_n_edges(),  1.5);
+        vector<double> min_bound(nn->get_parameter_size(), -1.5);
+        vector<double> max_bound(nn->get_parameter_size(),  1.5);
 
         if (rank == 0) {
-            cout << "number of parameters: " << ts_nn->get_n_edges() << endl;
+            cout << "number of parameters: " << nn->get_parameter_size() << endl;
         }
 
         string search_type;
         get_argument(arguments, "--search_type", true, search_type);
 
-        if (search_type.compare("ps") == 0) {
+        if (search_type.compare("backprop") == 0) {
+            uint32_t max_iterations;
+            get_argument(arguments, "--max_iterations", true, max_iterations);
+
+            double learning_rate;
+            get_argument(arguments, "--learning_rate", true, learning_rate);
+
+            vector<double> starting_weights(nn->get_parameter_size(), 0.0);
+            for (uint32_t i = 0; i < starting_weights.size(); i++) {
+                starting_weights.at(i) = 0.05 * drand48();
+            }
+
+            nn->backpropagation(starting_weights, learning_rate, max_iterations);
+        } else if (search_type.compare("ps") == 0) {
             ParticleSwarm ps(min_bound, max_bound, arguments);
             ps.iterate(objective_function);
 
