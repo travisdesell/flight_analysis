@@ -387,14 +387,14 @@ int main(int argc, char** argv) {
 
 
 
-    double pheromone_placement_rate = 1.0;
-    double pheromone_degradation_rate = 0.95;
+    double pheromone_placement_rate = 1.25;
+    double pheromone_degradation_rate = 0.75;
     double maximum_pheromone = 10.0;
     double minimum_pheromone = 0.1;
     uint32_t number_ants = 12;
-    uint32_t recurrent_depth = 2;
+    uint32_t recurrent_depth = 3;
     uint32_t n_input_nodes = cols;
-    uint32_t n_hidden_layers = 3;
+    uint32_t n_hidden_layers = 2;
     uint32_t n_hidden_nodes = n_input_nodes;
     uint32_t n_output_nodes = output_headers.size();
 
