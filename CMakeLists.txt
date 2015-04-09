@@ -35,6 +35,20 @@ MESSAGE(STATUS "UNDVC_COMMON library: ${UNDVC_COMMON_LIBRARY}")
 
 include_directories(${UNDVC_COMMON_INCLUDE_DIR})
 
+FIND_PATH(JSON11_INCLUDE_DIR json11.hpp
+    ../json11
+    )
+MESSAGE(STATUS "JSON 11 include directory: ${JSON11_INCLUDE_DIR}")
+
+FIND_LIBRARY(JSON11_LIBRARY
+    NAMES json11
+    PATHS ../json11/build               #add additional paths here if undvc_common is in a different directory
+                                        #or if it has been build in a different directory
+    PATH_SUFFIXES lib
+    )
+MESSAGE(STATUS "JSON 11 library: ${JSON11_LIBRARY}")
+
+
 
 #This will look for the tao library, which should be in the
 #same directory as this project. It should be compiled in the ../tao/build
@@ -106,7 +120,7 @@ target_link_libraries(svm ${UNDVC_COMMON_LIBRARY} ${MYSQL_LIBRARIES} ${Boost_LIB
 #target_link_libraries(prediction_tao_nn ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
 
 add_executable(endeavor_tao_nn endeavor_tao_nn flight_io)
-target_link_libraries(endeavor_tao_nn ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(endeavor_tao_nn ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES} ${JSON11_LIBRARY})
 
 add_executable(sort_flight_files sort_flight_files flight_io)
 target_link_libraries(sort_flight_files ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${UNDVC_COMMON_LIBRARY} ${TAO_LIBRARY} ${Boost_LIBRARIES})

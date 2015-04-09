@@ -44,6 +44,7 @@ using std::setprecision;
 #include "arguments.hxx"
 
 
+string search_type;
 NeuralNetwork *nn;
 
 double objective_function(const vector<double> &parameters) {
@@ -69,27 +70,44 @@ double aco_objective_function(vector<EdgeNew> &edges, vector<EdgeNew> &recurrent
 
     //cout << "edges.size(): " << edges.size() << ", recurrent_edges.size(): " << recurrent_edges.size() << endl;
 
+    nn->use_kahan_summation(true);
+    nn->use_batch_update(true);
+
     nn->reset();
     nn->set_edges(edges, recurrent_edges);
 
-    vector<double> min_bound(nn->get_parameter_size(), -1.5);
-    vector<double> max_bound(nn->get_parameter_size(),  1.5);
+    if (search_type.compare("backprop") == 0) {
+        uint32_t backprop_iterations;
+        get_argument(arguments, "--backprop_iterations", true, backprop_iterations);
 
-    //cout << "parameter size: " << nn->get_parameter_size() << endl;
+        double learning_rate;
+        get_argument(arguments, "--learning_rate", true, learning_rate);
 
-    ParticleSwarm ps(min_bound, max_bound, arguments);
+        vector<double> starting_weights(nn->get_parameter_size(), 0.0);
+        for (uint32_t i = 0; i < starting_weights.size(); i++) {
+            starting_weights.at(i) = 0.05 * drand48();
+        }
 
-    //run EA
-    ps.iterate(objective_function);
+        return nn->backpropagation_time_series(starting_weights, learning_rate, backprop_iterations);
+    } else {    //use PSO by default
+        vector<double> min_bound(nn->get_parameter_size(), -1.5);
+        vector<double> max_bound(nn->get_parameter_size(),  1.5);
 
-    //set the weights using the best found individual  
-    //dont need to set recurrent edges because they're weights are always 1
-    vector<double> global_best = ps.get_global_best();
-    int current = 0;
-    for (int i = 0; i < edges.size(); i++) {
-        edges[i].weight = global_best[current];
-        current++;
-    }
+        //cout << "parameter size: " << nn->get_parameter_size() << endl;
+
+        ParticleSwarm ps(min_bound, max_bound, arguments);
+
+        //run EA
+        ps.iterate(objective_function);
+
+        //set the weights using the best found individual  
+        //dont need to set recurrent edges because they're weights are always 1
+        vector<double> global_best = ps.get_global_best();
+        int current = 0;
+        for (int i = 0; i < edges.size(); i++) {
+            edges[i].weight = global_best[current];
+            current++;
+        }
 
     /*
     cout << "#feed forward edges" << endl;
@@ -111,7 +129,8 @@ double aco_objective_function(vector<EdgeNew> &edges, vector<EdgeNew> &recurrent
     cout << "recurrent_edges.size: " << recurrent_edges.size() << endl;
     */
 
-    return ps.get_global_best_fitness();
+        return ps.get_global_best_fitness();
+    }
 }
 
 //double neat_objective_function(int n_hidden_layers, int nodes_per_layer, const vector<Edge> &edges, const vector<Edge> &recurrent_edges) {
@@ -276,104 +295,6 @@ int main(int argc, char** argv) {
     }
 
 
-
-    double pheromone_placement_rate = 1.0;
-    double pheromone_degradation_rate = 0.95;
-    double maximum_pheromone = 20.0;
-    double minimum_pheromone = 1.0;
-    uint32_t number_ants = 16;
-    uint32_t recurrent_depth = 2;
-    uint32_t n_input_nodes = cols;
-    uint32_t n_hidden_layers = 1;
-    uint32_t n_hidden_nodes = 4;
-    uint32_t n_output_nodes = output_headers.size();
-
-    /*
-    AntColonyNew *aco_new = new AntColonyNew(pheromone_placement_rate, pheromone_degradation_rate, maximum_pheromone, minimum_pheromone, number_ants, recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes);
-
-    vector<EdgeNew> edges;
-    vector<EdgeNew> recurrent_edges;
-
-    //aco_new->generate_neural_network(edges, recurrent_edges);
-    //aco_new->generate_fully_connected_neural_network(edges, recurrent_edges);
-
-    // THIS IS A JORDAN NETWORK
-    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 0));
-    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 1));
-    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 2));
-    edges.push_back(EdgeNew(0, 0, 0, 0, 1, 3));
-
-    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 0));
-    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 1));
-    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 2));
-    edges.push_back(EdgeNew(0, 0, 1, 0, 1, 3));
-
-    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 0));
-    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 1));
-    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 2));
-    edges.push_back(EdgeNew(0, 0, 2, 0, 1, 3));
-
-    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 0));
-    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 1));
-    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 2));
-    edges.push_back(EdgeNew(0, 0, 3, 0, 1, 3));
-
-    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 0));
-    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 1));
-    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 2));
-    edges.push_back(EdgeNew(1, 0, 0, 0, 1, 3));
-
-    edges.push_back(EdgeNew(0, 1, 0, 0, 2, 0));
-    edges.push_back(EdgeNew(0, 1, 1, 0, 2, 0));
-    edges.push_back(EdgeNew(0, 1, 2, 0, 2, 0));
-    edges.push_back(EdgeNew(0, 1, 3, 0, 2, 0));
-
-    recurrent_edges.push_back(EdgeNew(0, 2, 0, 1, 0, 0));
-    */
-
-    /*
-    cout << "#edges" << endl;
-    for (uint32_t i = 0; i < edges.size(); i++) {
-        cout << "    " << edges.at(i) << endl;
-    }
-    cout << endl;
-
-    cout << "#recurrent_edges" << endl;
-    for (uint32_t i = 0; i < recurrent_edges.size(); i++) {
-        cout << "    " << recurrent_edges.at(i) << endl;
-    }
-    cout << endl;
-    */
-
-    nn = new NeuralNetwork(recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes, linear_activation_function, linear_derivative);
-
-    /*
-    nn->set_edges(edges, recurrent_edges, column_headers, output_headers);
-
-    if (rank == 0) {
-        cout << nn->json() << endl;
-
-        if (argument_exists(arguments, "--write_nn")) {
-            string nn_json_filename;
-            get_argument(arguments, "--write_nn", true, nn_json_filename);
-            
-            nn->write_to_file(nn_json_filename);
-        }
-    }
-    */
-
-    nn->set_training_data(rows - 1, cols, flight_data, 1, output_data);
-
-    /*
-    vector<double> weights;
-    for (uint32_t i = 0; i < nn->get_parameter_size(); i++) {
-        weights.push_back( (drand48() * 0.01) - 0.05 );
-    }
-
-    cout << "evaluating NN" << endl;
-    cout << nn->evaluate(weights) << endl;
-    */
-
     /*
     int n_positives = 0, n_negatives = 0;
     vector<string> positive_flights, negative_flights;
@@ -465,6 +386,20 @@ int main(int argc, char** argv) {
     */
 
 
+
+    double pheromone_placement_rate = 1.0;
+    double pheromone_degradation_rate = 0.95;
+    double maximum_pheromone = 10.0;
+    double minimum_pheromone = 0.1;
+    uint32_t number_ants = 12;
+    uint32_t recurrent_depth = 2;
+    uint32_t n_input_nodes = cols;
+    uint32_t n_hidden_layers = 3;
+    uint32_t n_hidden_nodes = n_input_nodes;
+    uint32_t n_output_nodes = output_headers.size();
+
+    get_argument(arguments, "--search_type", true, search_type);
+
     if (argument_exists(arguments, "--aco_iterations")) {
         //string aco_output_directory;
         uint32_t aco_iterations;
@@ -484,6 +419,11 @@ int main(int argc, char** argv) {
         get_argument(arguments, "--number_ants", true, number_ants);
         */
 
+        nn = new NeuralNetwork(recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes, "linear");
+
+        nn->set_training_data(rows - 1, cols, flight_data, 1, output_data);
+
+
         AntColonyNew ant_colony(pheromone_placement_rate, pheromone_degradation_rate, maximum_pheromone, minimum_pheromone, number_ants, recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes, aco_population_size);
 
         //ant_colony.set_output_directory(aco_output_directory);
@@ -493,8 +433,57 @@ int main(int argc, char** argv) {
     } else {
         //read the nn edges from a file
         string nn_filename;
-        get_argument(arguments, "--nn", true, nn_filename);
-        nn = new NeuralNetwork(nn_filename);
+
+        if (argument_exists(arguments, "--nn")) {
+            get_argument(arguments, "--nn", true, nn_filename);
+            nn = new NeuralNetwork(nn_filename);
+        } else {
+            recurrent_depth = 2;
+            n_hidden_layers = 1;
+            n_hidden_nodes = 4;
+            n_output_nodes = 1;
+            nn = new NeuralNetwork(recurrent_depth, n_input_nodes, n_hidden_layers, n_hidden_nodes, n_output_nodes, "linear");
+
+            nn->set_training_data(rows - 1, cols, flight_data, 1, output_data);
+
+            vector<EdgeNew> edges;
+            vector<EdgeNew> recurrent_edges;
+
+            // THIS IS A JORDAN NETWORK
+            edges.push_back(EdgeNew(0, 0, 0, 0, 1, 0));
+            edges.push_back(EdgeNew(0, 0, 0, 0, 1, 1));
+            edges.push_back(EdgeNew(0, 0, 0, 0, 1, 2));
+            edges.push_back(EdgeNew(0, 0, 0, 0, 1, 3));
+
+            edges.push_back(EdgeNew(0, 0, 1, 0, 1, 0));
+            edges.push_back(EdgeNew(0, 0, 1, 0, 1, 1));
+            edges.push_back(EdgeNew(0, 0, 1, 0, 1, 2));
+            edges.push_back(EdgeNew(0, 0, 1, 0, 1, 3));
+
+            edges.push_back(EdgeNew(0, 0, 2, 0, 1, 0));
+            edges.push_back(EdgeNew(0, 0, 2, 0, 1, 1));
+            edges.push_back(EdgeNew(0, 0, 2, 0, 1, 2));
+            edges.push_back(EdgeNew(0, 0, 2, 0, 1, 3));
+
+            edges.push_back(EdgeNew(0, 0, 3, 0, 1, 0));
+            edges.push_back(EdgeNew(0, 0, 3, 0, 1, 1));
+            edges.push_back(EdgeNew(0, 0, 3, 0, 1, 2));
+            edges.push_back(EdgeNew(0, 0, 3, 0, 1, 3));
+
+            edges.push_back(EdgeNew(1, 0, 0, 0, 1, 0));
+            edges.push_back(EdgeNew(1, 0, 0, 0, 1, 1));
+            edges.push_back(EdgeNew(1, 0, 0, 0, 1, 2));
+            edges.push_back(EdgeNew(1, 0, 0, 0, 1, 3));
+
+            edges.push_back(EdgeNew(0, 1, 0, 0, 2, 0));
+            edges.push_back(EdgeNew(0, 1, 1, 0, 2, 0));
+            edges.push_back(EdgeNew(0, 1, 2, 0, 2, 0));
+            edges.push_back(EdgeNew(0, 1, 3, 0, 2, 0));
+
+            recurrent_edges.push_back(EdgeNew(0, 2, 0, 1, 0, 0));
+
+            nn->set_edges(edges, recurrent_edges);
+        }
 
         vector<double> min_bound(nn->get_parameter_size(), -1.5);
         vector<double> max_bound(nn->get_parameter_size(),  1.5);
@@ -503,12 +492,9 @@ int main(int argc, char** argv) {
             cout << "number of parameters: " << nn->get_parameter_size() << endl;
         }
 
-        string search_type;
-        get_argument(arguments, "--search_type", true, search_type);
-
         if (search_type.compare("backprop") == 0) {
-            uint32_t max_iterations;
-            get_argument(arguments, "--max_iterations", true, max_iterations);
+            uint32_t backprop_iterations;
+            get_argument(arguments, "--backprop_iterations", true, backprop_iterations);
 
             double learning_rate;
             get_argument(arguments, "--learning_rate", true, learning_rate);
@@ -518,7 +504,12 @@ int main(int argc, char** argv) {
                 starting_weights.at(i) = 0.05 * drand48();
             }
 
-            nn->backpropagation(starting_weights, learning_rate, max_iterations);
+            cout << nn->json() << endl;
+
+            nn->use_kahan_summation(true);
+            nn->use_batch_update(true);
+
+            nn->backpropagation_time_series(starting_weights, learning_rate, backprop_iterations);
         } else if (search_type.compare("ps") == 0) {
             ParticleSwarm ps(min_bound, max_bound, arguments);
             ps.iterate(objective_function);
