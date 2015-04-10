@@ -70,7 +70,7 @@ double aco_objective_function(vector<EdgeNew> &edges, vector<EdgeNew> &recurrent
 
     //cout << "edges.size(): " << edges.size() << ", recurrent_edges.size(): " << recurrent_edges.size() << endl;
 
-    nn->use_kahan_summation(true);
+    //nn->use_kahan_summation(true);
     nn->use_batch_update(true);
 
     nn->reset();
@@ -387,14 +387,14 @@ int main(int argc, char** argv) {
 
 
 
-    double pheromone_placement_rate = 1.25;
-    double pheromone_degradation_rate = 0.75;
+    double pheromone_placement_rate = 1.15;
+    double pheromone_degradation_rate = 0.85;
     double maximum_pheromone = 10.0;
     double minimum_pheromone = 0.1;
-    uint32_t number_ants = 12;
-    uint32_t recurrent_depth = 3;
+    uint32_t number_ants = 64;
+    uint32_t recurrent_depth = 2;
     uint32_t n_input_nodes = cols;
-    uint32_t n_hidden_layers = 2;
+    uint32_t n_hidden_layers = 1;
     uint32_t n_hidden_nodes = n_input_nodes;
     uint32_t n_output_nodes = output_headers.size();
 
